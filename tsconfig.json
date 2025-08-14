@@ -14,7 +14,8 @@
     "rootDir": "./",
     "noEmit": false,
     "types": ["node"],
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": false,
+    "allowSyntheticDefaultImports": true
   },
   "include": ["**/*.ts"],
   "exclude": ["node_modules", "dist"]

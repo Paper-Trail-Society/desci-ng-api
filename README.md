@@ -30,7 +30,7 @@ Create a `.env` file in the root directory with your environment variables:
 
 ```bash
 # .env example
-API_PORT=3000
+API_PORT=<PORT>
 DATABASE_URL=postgres://user:password@localhost:5432/desci
 # Add other environment variables as needed
 ```
@@ -48,9 +48,11 @@ npm run dev
 
 This uses Node.js's native features:
 - `--experimental-strip-types`: Strips TypeScript types at runtime
-- `--experimental-transform-types`: Supports TypeScript-specific syntax
-- `--env-file=.env`: Loads environment variables from .env file
+- `--experimental-transform-types`: Supports TypeScript-specific syntax like enums
+- `--env-file=.env`: Loads environment variables from .env file (no dotenv needed)
 - `--watch`: Automatically restarts on file changes
+
+The project uses ECMAScript Modules (ESM), which is specified by `"type": "module"` in package.json.
 
 ### Manual Execution
 
@@ -84,7 +86,7 @@ npm start
 desci/
 ├── dist/             # Compiled JavaScript output (generated)
 ├── node_modules/     # Dependencies (generated)
-├── src/              
+├── src/
 │   └── index.ts      # Main entry point
 ├── .env              # Environment variables (create this file)
 ├── .gitignore        # Git ignore file
@@ -107,11 +109,17 @@ The following npm scripts are available:
 This project uses a modern TypeScript setup with:
 
 - ES2022 target
-- ESM modules
+- ESM modules (ECMAScript Modules)
 - Strict type checking
 - Other best practices from 2024
 
-See `tsconfig.json` for details.
+This project is configured to use ECMAScript Modules (ESM) instead of CommonJS, as specified by `"type": "module"` in package.json. This means:
+
+- Import statements use the `import` syntax instead of `require()`
+- When importing local files in TypeScript, you must use the `.js` extension (not `.ts`) even though the source files are `.ts`
+- The project works with Node.js native ESM support
+
+See `tsconfig.json` for detailed configuration.
 
 ## License
 
