@@ -11,11 +11,11 @@
     "isolatedModules": true,
     "resolveJsonModule": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "./",
     "noEmit": false,
     "types": ["node"],
     "verbatimModuleSyntax": true
   },
-  "include": ["./**/*.ts"],
+  "include": ["**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
