@@ -6,9 +6,9 @@ if (!process.env.SUPABASE_URL) {
 }
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.SUPABASE_URL,
   max: 10,
-  idleTimeoutMillis: 30000,
+  idleTimeoutMillis: 20000,
   connectionTimeoutMillis: 2000,
 });
 
