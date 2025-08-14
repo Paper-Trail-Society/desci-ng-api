@@ -1,0 +1,40 @@
+[build]
+# The directory where your source code is located
+base = "."
+
+# Command to build your site
+command = "npm run build"
+
+# Directory to deploy (the compiled JavaScript output)
+publish = "dist"
+
+# Directory containing your serverless functions
+functions = "netlify/functions"
+
+# Increase function timeout to avoid cold start issues
+function_timeout = 30
+
+# Redirect all requests to the serverless function
+[[redirects]]
+from = "/*"
+to = "/.netlify/functions/api"
+status = 200
+force = true
+
+# Fallback route for API
+[[redirects]]
+from = "/api/*"
+to = "/.netlify/functions/api/:splat"
+status = 200
+
+# Environment variable configuration
+[build.environment]
+NODE_VERSION = "18"
+# Signal to the app that we're running in Netlify
+NETLIFY = "true"
+
+# For local development with Netlify CLI
+[dev]
+command = "npm run dev"
+port = 8888
+targetPort = 8080

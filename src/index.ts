@@ -3,11 +3,30 @@ import type { Request, Response } from "express";
 import { db } from "./db/index";
 import { sql } from "drizzle-orm";
 
+// Explicitly indicate if we're in a serverless environment
+const isServerless =
+  process.env.NETLIFY === "true" || process.env.NODE_ENV === "production";
+
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 8080;
 
 // Middleware to parse JSON
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Set appropriate headers for CORS if needed
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+  );
+  if (req.method === "OPTIONS") {
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH");
+    return res.status(200).json({});
+  }
+  next();
+});
 
 // Home route
 app.get("/", (req: Request, res: Response) => {
@@ -26,10 +45,17 @@ app.get("/health", async (req: Request, res: Response) => {
   }
 });
 
-// Start the server
-app.listen(port, () => {
-  console.log(`DeSci API listening on port ${port}`);
-});
+// Start the server only when not running as a serverless function
+if (process.env.NETLIFY !== "true" && process.env.NODE_ENV !== "production") {
+  app.listen(port, () => {
+    console.log(`DeSci API listening on port ${port}`);
+  });
+}
+
+// Make sure to correctly export the Express app for serverless functions
+module.exports = app;
+module.exports.default = app;
+export default app;
 
 process.on("SIGTERM", async () => {
   console.log("SIGTERM received, shutting down gracefully");
