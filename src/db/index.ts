@@ -1,12 +1,8 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
-if (!process.env.SUPABASE_URL) {
-  throw new Error("DATABASE_URL environment variable is required");
-}
-
 const pool = new Pool({
-  connectionString: process.env.SUPABASE_URL,
+  connectionString: process.env.DATABASE_URL,
   max: 10,
   idleTimeoutMillis: 20000,
   connectionTimeoutMillis: 2000,

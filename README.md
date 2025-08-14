@@ -1,130 +1,95 @@
-# desci-ng-api
+# DeSci API
 
-A modern TypeScript project for decentralized science applications.
+Decentralized Science Platform API built with Express and PostgreSQL.
 
-## Prerequisites
-
-- [Node.js](https://nodejs.org/) v20.6.0 or higher
-- npm (usually comes with Node.js)
-
-## Getting Started
-
-### Clone the Repository
+## Quick Start
 
 ```bash
-git clone <repository-url>
-cd desci
-```
-
-### Install Dependencies
-
-```bash
+# Install dependencies
 npm install
+
+# Development
+npm run dev
+
+# Build and start production
+npm run build
+npm start
+
+# Deploy to Netlify
+npm run netlify:deploy
 ```
 
-## Project Setup
+## Environment Setup
 
-### Environment Variables
+Create `.env` file with:
 
-Create a `.env` file in the root directory with your environment variables:
-
-```bash
-# .env example
-API_PORT=<PORT>
+```
+PORT=8080
 DATABASE_URL=postgres://user:password@localhost:5432/desci
-# Add other environment variables as needed
 ```
+
+## Database
+
+PostgreSQL with Drizzle ORM:
+- Connection configured via `DATABASE_URL`
+- Schema defined in `src/db/schema`
+
+## API Endpoints
+
+- `GET /` - API info
+- `GET /health` - Health check with DB connection status
 
 ## Development
 
-### Run in Development Mode
+- TypeScript with Node.js
+- Express for API routing
+- PostgreSQL with Drizzle ORM
+- ESLint and Prettier for code quality
 
-This project leverages Node.js's experimental TypeScript support, allowing you to run TypeScript files directly without a separate build step:
+## Deployment
 
-```bash
-# Start the development server with automatic reloading
-npm run dev
-```
+Configured for Netlify:
+- Serverless functions in `netlify/functions`
+- Redirects configured in `netlify.toml`
+- Environment variables must be set in Netlify dashboard
 
-This uses Node.js's native features:
-- `--experimental-strip-types`: Strips TypeScript types at runtime
-- `--experimental-transform-types`: Supports TypeScript-specific syntax like enums
-- `--env-file=.env`: Loads environment variables from .env file (no dotenv needed)
-- `--watch`: Automatically restarts on file changes
+## Scripts
 
-The project uses ECMAScript Modules (ESM), which is specified by `"type": "module"` in package.json.
-
-### Manual Execution
-
-You can also run the project directly with Node.js:
-
-```bash
-node --experimental-strip-types --env-file=.env --watch src/index.ts
-```
-
-## Building for Production
-
-### Compile TypeScript
-
-```bash
-# Build the project
-npm run build
-```
-
-This will compile TypeScript files to JavaScript in the `dist` directory.
-
-### Run Production Build
-
-```bash
-# Start the production server
-npm start
-```
+- `npm run dev` - Start dev server with hot reload
+- `npm run build` - Compile TypeScript
+- `npm start` - Run production build
+- `npm run netlify:dev` - Test Netlify deployment locally
+- `npm run netlify:deploy` - Deploy to Netlify
 
 ## Project Structure
 
 ```
 desci/
-├── dist/             # Compiled JavaScript output (generated)
-├── node_modules/     # Dependencies (generated)
-├── src/
-│   └── index.ts      # Main entry point
-├── .env              # Environment variables (create this file)
-├── .gitignore        # Git ignore file
-├── package.json      # Project metadata and scripts
-├── package-lock.json # Dependency lock file
-├── README.md         # This file
-└── tsconfig.json     # TypeScript configuration
+├── dist/              # Compiled output
+├── netlify/           # Netlify configuration
+│   └── functions/     # Serverless functions
+├── src/               # Source code
+│   ├── db/            # Database models & connection
+│   └── index.ts       # Main entry point
+├── .env               # Environment variables
+├── netlify.toml       # Netlify configuration
+├── package.json       # Dependencies & scripts
+└── tsconfig.json      # TypeScript configuration
 ```
 
-## Scripts
+### MIGRATIONS
+When you create schema updates, run the drizzle generate command, which creates the tables to be migrated:
+```bash
+npx drizzle-kit generate
+```
 
-The following npm scripts are available:
+When that succeeds, run the migration:
+```bash
+npx drizzle-kit migrate
+```
 
-- `npm run dev`: Start the development server with hot reloading
-- `npm run build`: Build the project for production
-- `npm start`: Run the production build
+Push directly to Supabase (pending a production database):
 
-## TypeScript Configuration
-
-This project uses a modern TypeScript setup with:
-
-- ES2022 target
-- ESM modules (ECMAScript Modules)
-- Strict type checking
-- Other best practices from 2024
-
-This project is configured to use ECMAScript Modules (ESM) instead of CommonJS, as specified by `"type": "module"` in package.json. This means:
-
-- Import statements use the `import` syntax instead of `require()`
-- When importing local files in TypeScript, you must use the `.js` extension (not `.ts`) even though the source files are `.ts`
-- The project works with Node.js native ESM support
-
-See `tsconfig.json` for detailed configuration.
-
-## License
-
-ISC
-
-## Author
-
-Justin Irabor
+```bash
+npx drizzle-kit push
+```
