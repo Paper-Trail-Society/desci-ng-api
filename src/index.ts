@@ -1,16 +1,25 @@
 import express from "express";
 import type { Request, Response } from "express";
 import { db } from "./utils/db";
-import { usersTable } from "./db/schema";
+import { papersTable, usersTable } from "./db/schema";
+import "multer";
+import multer from "multer";
+import { pinata } from "./db/pinata";
 
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+}
+
+const upload = multer({ dest: "uploads/" });
 const isServerless =
   process.env.NETLIFY === "true" || process.env.NODE_ENV === "production";
 
 const app = express();
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 3000;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Increase the payload size limit for JSON and URL-encoded bodies
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
@@ -39,6 +48,94 @@ app.get("/health", async (req: Request, res: Response) => {
     res.status(500).json({ status: "unhealthy", database: "disconnected" });
   }
 });
+
+app.post(
+  "/files/upload",
+  upload.single("pdfFile"),
+  async (req: MulterRequest, res: Response) => {
+    try {
+      // Log request details for debugging
+      console.log("Upload request received");
+      console.log("Request body:", req.body);
+      console.log("File received:", req.file ? "Yes" : "No");
+
+      if (!req.file) {
+        return res.status(400).json({
+          status: "error",
+          message: "No PDF file uploaded",
+        });
+      }
+
+      const { title, abstract } = req.body;
+
+      if (!title) {
+        return res.status(400).json({
+          status: "error",
+          message: "PDF title is required",
+        });
+      }
+
+      // Get file information
+      const file = req.file;
+      console.log("File details:", {
+        filename: file.originalname,
+        size: file.size,
+        mimetype: file.mimetype,
+        path: file.path,
+      });
+
+      // Upload to Pinata
+      const metadata = {
+        title,
+        abstract: abstract || "",
+        originalFilename: file.originalname,
+        contentType: file.mimetype,
+      };
+
+      // @ts-ignore
+      const pinataResponse = await pinata.upload.public.file(file);
+      console.log("Pinata response:", pinataResponse);
+
+      // Store document information in database
+      const [newDocument] = await db
+        .insert(papersTable)
+        .values({
+          title,
+          abstract: abstract || null,
+          content: "placeholder",
+          // ipfsHash: pinataResponse.ipfsHash,
+          // filename: file.originalname,
+          // filesize: file.size,
+          userId: req.body.userId || null, // Associate with user if provided
+        })
+        .returning();
+
+      // Return success response
+      res.status(201).json({
+        status: "success",
+        message: "PDF uploaded successfully",
+        document: {
+          id: newDocument.id,
+          title: newDocument.title,
+          abstract: newDocument.abstract,
+          // ipfsHash: newDocument.ipfsHash,
+          // ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${newDocument.ipfsHash}`,
+          // filename: newDocument.filename,
+          // filesize: newDocument.filesize,
+          // createdAt: newDocument.createdAt,
+        },
+      });
+    } catch (error) {
+      console.error("PDF upload failed:", error);
+      res.status(500).json({
+        status: "error",
+        message:
+          "Failed to upload PDF. Please check your connection and try again",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  },
+);
 
 if (process.env.NETLIFY !== "true" && process.env.NODE_ENV !== "production") {
   app.listen(port, () => {

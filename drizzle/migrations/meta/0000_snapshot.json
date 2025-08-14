@@ -1,11 +1,11 @@
 {
-  "id": "2987fcb4-7ab7-4863-9a28-0d4a0f6ed43b",
+  "id": "5d3446fd-af4a-4687-a7e0-dfc09c5b10c7",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.posts_table": {
-      "name": "posts_table",
+    "public.papers": {
+      "name": "papers",
       "schema": "",
       "columns": {
         "id": {
@@ -22,6 +22,12 @@
         },
         "content": {
           "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "abstract": {
+          "name": "abstract",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -48,10 +54,10 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "posts_table_user_id_users_table_id_fk": {
-          "name": "posts_table_user_id_users_table_id_fk",
-          "tableFrom": "posts_table",
-          "tableTo": "users_table",
+        "papers_user_id_users_id_fk": {
+          "name": "papers_user_id_users_id_fk",
+          "tableFrom": "papers",
+          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
@@ -68,8 +74,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.users_table": {
-      "name": "users_table",
+    "public.users": {
+      "name": "users",
       "schema": "",
       "columns": {
         "id": {
@@ -101,8 +107,8 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "users_table_email_unique": {
-          "name": "users_table_email_unique",
+        "users_email_unique": {
+          "name": "users_email_unique",
           "nullsNotDistinct": false,
           "columns": [
             "email"
