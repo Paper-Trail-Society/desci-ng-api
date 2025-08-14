@@ -33,6 +33,22 @@ DATABASE_URL=postgres://user:password@localhost:5432/desci
 PostgreSQL with Drizzle ORM:
 - Connection configured via `DATABASE_URL`
 - Schema defined in `src/db/schema`
+- Migrations in `drizzle/migrations`
+
+Database Commands:
+```bash
+# Generate migrations
+npm run db:generate
+
+# Run migrations
+npm run db:migrate
+
+# Check schema against database
+npm run db:check
+
+# View database with GUI
+npm run db:studio
+```
 
 ## API Endpoints
 
@@ -60,18 +76,25 @@ Configured for Netlify:
 - `npm start` - Run production build
 - `npm run netlify:dev` - Test Netlify deployment locally
 - `npm run netlify:deploy` - Deploy to Netlify
+- `npm run db:generate` - Generate database migrations
+- `npm run db:migrate` - Run database migrations
+- `npm run db:check` - Verify database schema
+- `npm run db:studio` - Open database GUI
 
 ## Project Structure
 
 ```
 desci/
 ├── dist/              # Compiled output
+├── drizzle/           # Drizzle ORM configuration
+│   └── migrations/    # Database migrations
 ├── netlify/           # Netlify configuration
 │   └── functions/     # Serverless functions
 ├── src/               # Source code
 │   ├── db/            # Database models & connection
 │   └── index.ts       # Main entry point
 ├── .env               # Environment variables
+├── drizzle.config.ts  # Drizzle configuration
 ├── netlify.toml       # Netlify configuration
 ├── package.json       # Dependencies & scripts
 └── tsconfig.json      # TypeScript configuration

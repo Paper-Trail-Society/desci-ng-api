@@ -16,8 +16,10 @@
     "types": ["node"],
     "verbatimModuleSyntax": false,
     "allowSyntheticDefaultImports": true,
-    "declaration": false
+    "declaration": false,
+    "sourceMap": true,
+    "baseUrl": "./src"
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "netlify/functions"]
+  "exclude": ["node_modules", "dist", "netlify/functions", "drizzle"]
 }

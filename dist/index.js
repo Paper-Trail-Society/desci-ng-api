@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const index_1 = require("./db/index");
+const db_1 = require("./utils/db");
 const schema_1 = require("./db/schema");
 const isServerless = process.env.NETLIFY === "true" || process.env.NODE_ENV === "production";
 const app = (0, express_1.default)();
@@ -26,7 +26,7 @@ app.get("/", (req, res) => {
 // Health check endpoint
 app.get("/health", async (req, res) => {
     try {
-        await index_1.db.select().from(schema_1.usersTable);
+        await db_1.db.select().from(schema_1.usersTable);
         res.json({ status: "healthy", database: "connected" });
     }
     catch (error) {
@@ -53,3 +53,4 @@ process.on("SIGTERM", async () => {
     }
     process.exit(0);
 });
+//# sourceMappingURL=index.js.map

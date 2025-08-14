@@ -1,6 +1,6 @@
 import express from "express";
 import type { Request, Response } from "express";
-import { db } from "./db/index";
+import { db } from "./utils/db";
 import { usersTable } from "./db/schema";
 
 const isServerless =
