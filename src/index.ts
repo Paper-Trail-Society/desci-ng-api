@@ -1,6 +1,6 @@
 import express from "express";
 import type { Request, Response } from "express";
-import { db } from "./db/index.ts";
+import { db } from "./db/index";
 import { sql } from "drizzle-orm";
 
 const app = express();
