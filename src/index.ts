@@ -4,7 +4,7 @@ import { db } from "./db/index.ts";
 import { sql } from "drizzle-orm";
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 
 // Middleware to parse JSON
 app.use(express.json());
