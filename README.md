@@ -2,5 +2,5 @@
 
 To start;
 ```bash
-node --env-file=.env index.ts
+node --experimental-strip-types --env-file=.env --watch index.ts
 ```
