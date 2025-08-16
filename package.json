@@ -16,6 +16,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "node --experimental-strip-types --experimental-transform-types --env-file=.env --watch src/index.ts",
+    "dev:tsx": "npx tsx --env-file=.env --watch src/index.ts",
     "start": "node --env-file=.env dist/index.js",
     "netlify:dev": "netlify dev",
     "netlify:deploy": "netlify deploy --prod",
