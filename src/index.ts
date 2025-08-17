@@ -5,7 +5,7 @@ import { papersTable, usersTable } from "./db/schema";
 import "multer";
 import multer from "multer";
 import { pinata } from "./db/pinata";
-import { toNodeHandler } from "better-auth/node";
+import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
 import { auth } from "utils/auth";
 
 interface MulterRequest extends Request {
@@ -54,6 +54,13 @@ app.get("/health", async (req: Request, res: Response) => {
     console.error("Health check failed:", error);
     res.status(500).json({ status: "unhealthy", database: "disconnected" });
   }
+});
+
+app.get("/auth/me", async (req, res) => {
+  const session = await auth.api.getSession({
+    headers: fromNodeHeaders(req.headers),
+  });
+  return res.json(session);
 });
 
 app.post(
