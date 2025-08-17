@@ -1,16 +1,14 @@
 import {
-  integer,
   pgTable,
-  serial,
   text,
   timestamp,
   boolean,
+  integer,
 } from "drizzle-orm/pg-core";
 
-export const usersTable = pgTable("users", {
+export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  age: integer("age").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified")
     .$defaultFn(() => false)
@@ -24,7 +22,7 @@ export const usersTable = pgTable("users", {
     .notNull(),
 });
 
-export const sessionsTable = pgTable("session", {
+export const session = pgTable("session", {
   id: text("id").primaryKey(),
   expiresAt: timestamp("expires_at").notNull(),
   token: text("token").notNull().unique(),
@@ -34,16 +32,16 @@ export const sessionsTable = pgTable("session", {
   userAgent: text("user_agent"),
   userId: text("user_id")
     .notNull()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
+    .references(() => user.id, { onDelete: "cascade" }),
 });
 
-export const accountsTable = pgTable("account", {
+export const account = pgTable("account", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
   userId: text("user_id")
     .notNull()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
+    .references(() => user.id, { onDelete: "cascade" }),
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   idToken: text("id_token"),
@@ -55,7 +53,7 @@ export const accountsTable = pgTable("account", {
   updatedAt: timestamp("updated_at").notNull(),
 });
 
-export const verificationsTable = pgTable("verification", {
+export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
@@ -67,23 +65,3 @@ export const verificationsTable = pgTable("verification", {
     () => /* @__PURE__ */ new Date(),
   ),
 });
-
-export const papersTable = pgTable("papers", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  content: text("content").notNull(),
-  abstract: text("abstract").notNull(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
-
-export type InsertUser = typeof usersTable.$inferInsert;
-export type SelectUser = typeof usersTable.$inferSelect;
-
-export type InsertPaper = typeof papersTable.$inferInsert;
-export type SelectPaper = typeof papersTable.$inferSelect;

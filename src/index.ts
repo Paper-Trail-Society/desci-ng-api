@@ -5,6 +5,8 @@ import { papersTable, usersTable } from "./db/schema";
 import "multer";
 import multer from "multer";
 import { pinata } from "./db/pinata";
+import { toNodeHandler } from "better-auth/node";
+import { auth } from "utils/auth";
 
 interface MulterRequest extends Request {
   file?: Express.Multer.File;
@@ -16,6 +18,11 @@ const isServerless =
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+// better-auth requires access to the raw request body to handle authentication requests correctly.
+// Therefore, the better-auth handler must be mounted before any middleware that parses the request body,
+// such as express.json()
+app.all("/auth/{*any}", toNodeHandler(auth));
 
 // Increase the payload size limit for JSON and URL-encoded bodies
 app.use(express.json({ limit: "100mb" }));
