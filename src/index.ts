@@ -5,6 +5,7 @@ import { papersTable, usersTable } from "./db/schema";
 import "multer";
 import multer from "multer";
 import { pinata } from "./db/pinata";
+import { papersRouter } from "modules/papers/route";
 
 interface MulterRequest extends Request {
   file?: Express.Multer.File;
@@ -33,6 +34,8 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+app.use(papersRouter);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("DeSci API - Decentralized Science Platform");
@@ -75,6 +78,8 @@ app.post(
         });
       }
 
+      const VALID_FILE_TYPES = ['pdf'];
+
       // Get file information
       const file = req.file;
       console.log("File details:", {
@@ -83,6 +88,10 @@ app.post(
         mimetype: file.mimetype,
         path: file.path,
       });
+
+      if (!VALID_FILE_TYPES.includes(file.mimetype )) {
+        
+      }
 
       // Upload to Pinata
       const metadata = {
@@ -93,31 +102,31 @@ app.post(
       };
 
       // @ts-ignore
-      const pinataResponse = await pinata.upload.public.file(file);
-      console.log("Pinata response:", pinataResponse);
+      // const pinataResponse = await pinata.upload.public.file(file);
+      // console.log("Pinata response:", pinataResponse);
 
-      // Store document information in database
-      const [newDocument] = await db
-        .insert(papersTable)
-        .values({
-          title,
-          abstract: abstract || null,
-          content: "placeholder",
-          // ipfsHash: pinataResponse.ipfsHash,
-          // filename: file.originalname,
-          // filesize: file.size,
-          userId: req.body.userId || null, // Associate with user if provided
-        })
-        .returning();
+      // // Store document information in database
+      // const [newDocument] = await db
+      //   .insert(papersTable)
+      //   .values({
+      //     title,
+      //     abstract: abstract || null,
+      //     content: "placeholder",
+      //     // ipfsHash: pinataResponse.ipfsHash,
+      //     // filename: file.originalname,
+      //     // filesize: file.size,
+      //     userId: req.body.userId || null, // Associate with user if provided
+      //   })
+      //   .returning();
 
       // Return success response
       res.status(201).json({
         status: "success",
         message: "PDF uploaded successfully",
         document: {
-          id: newDocument.id,
-          title: newDocument.title,
-          abstract: newDocument.abstract,
+          // id: newDocument.id,
+          // title: newDocument.title,
+          // abstract: newDocument.abstract,
           // ipfsHash: newDocument.ipfsHash,
           // ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${newDocument.ipfsHash}`,
           // filename: newDocument.filename,
