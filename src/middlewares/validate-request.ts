@@ -10,13 +10,10 @@ import { Request, Response, NextFunction } from "express";
 export const validateRequest =
   (schema: ZodObject) => (req: Request, res: Response, next: NextFunction) => {
     try {
-      schema.parse({
-        body: req.body,
-        query: req.query,
-        params: req.params,
-      });
+      schema.parse(req.body);
       next();
     } catch (err) {
+        console.log(req.body)
       if (err instanceof ZodError) {
         const formattedErrors = err.issues.map((issue) => ({
           path: issue.path.join("."),
