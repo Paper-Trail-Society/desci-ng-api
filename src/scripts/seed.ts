@@ -1,8 +1,10 @@
-import { categoriesTable, fieldsTable } from "db/schema";
-import { v } from "pinata/dist/gateway-tools-l9hk7kz4";
-import { db } from "utils/db";
+import { eq } from "drizzle-orm";
+import { categoriesTable, fieldsTable } from "../db/schema";
+import { db } from "../utils/db";
 
 const seedFieldsAndCategoriesTable = async () => {
+  console.log("Seeding fields and categories tables...");
+
   const fieldsToCategoriesMap = {
     "Social Sciences": [
       "Political Science",
@@ -59,27 +61,66 @@ const seedFieldsAndCategoriesTable = async () => {
   };
 
   Object.keys(fieldsToCategoriesMap).forEach(async (field) => {
-    const [fieldDoc] = await db
-      .insert(fieldsTable)
-      .values({ name: field })
-      .returning()
+    console.log(`Processing field: ${field}`);
+
+    const [existingFieldDoc] = await db
+      .select({ id: fieldsTable.id })
+      .from(fieldsTable)
+      .where(eq(fieldsTable.name, field))
       .execute();
+
+    const fieldDoc =
+      existingFieldDoc ||
+      (
+        await db
+          .insert(fieldsTable)
+          .values({ name: field })
+          .returning()
+          .execute()
+      )[0];
 
     const categories =
       fieldsToCategoriesMap[field as keyof typeof fieldsToCategoriesMap];
 
-    await db
-      .insert(categoriesTable)
-      .values(
-        categories.map((category) => ({ name: category, fieldId: fieldDoc.id }))
-      )
-      .returning()
+    const existingCategories = await db
+      .select({ name: categoriesTable.name })
+      .from(categoriesTable)
+      .where(eq(categoriesTable.fieldId, fieldDoc.id))
       .execute();
+
+    const categoriesToInsert: string[] = [];
+    const categoryNames = existingCategories.map((cat) => cat.name);
+    for (const category of categories) {
+      if (!categoryNames.includes(category)) {
+        categoriesToInsert.push(category);
+      }
+    }
+
+    if (categoriesToInsert.length > 0) {
+      console.log(`Inserting ${categoriesToInsert.length} categories for field: ${field}`);
+      await db
+        .insert(categoriesTable)
+        .values(
+          categoriesToInsert.map((category) => ({
+            name: category,
+            fieldId: fieldDoc.id,
+          }))
+        )
+        .returning()
+        .execute();
+    }
   });
+
+  console.log("Fields and categories tables seeding complete!");
+  process.exit(0);
 };
 
-const main = () => {
-  seedFieldsAndCategoriesTable();
+const main = async () => {
+  await seedFieldsAndCategoriesTable();
 };
 
-main();
+main().catch((err) => {
+  console.error("❌ Unhandled error during database seeding:", err);
+  process.exit(1);
+});
+
