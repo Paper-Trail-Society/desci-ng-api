@@ -27,8 +27,8 @@ const upload = multer({
 
 papersRouter.post(
   "/papers",
-  validateRequest(uploadPaper),
   upload.single("pdfFile"),
+  validateRequest(uploadPaper),
   async (req, res) => papersController.create(req, res)
 );
 

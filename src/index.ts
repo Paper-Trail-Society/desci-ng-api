@@ -102,22 +102,22 @@ app.post(
       };
 
       // @ts-ignore
-      // const pinataResponse = await pinata.upload.public.file(file);
-      // console.log("Pinata response:", pinataResponse);
+      const pinataResponse = await pinata.upload.public.file(file);
+      console.log("Pinata response:", pinataResponse);
 
-      // // Store document information in database
-      // const [newDocument] = await db
-      //   .insert(papersTable)
-      //   .values({
-      //     title,
-      //     abstract: abstract || null,
-      //     content: "placeholder",
-      //     // ipfsHash: pinataResponse.ipfsHash,
-      //     // filename: file.originalname,
-      //     // filesize: file.size,
-      //     userId: req.body.userId || null, // Associate with user if provided
-      //   })
-      //   .returning();
+      // Store document information in database
+      const [newDocument] = await db
+        .insert(papersTable)
+        .values({
+          title,
+          abstract: abstract || null,
+          content: "placeholder",
+          // ipfsHash: pinataResponse.ipfsHash,
+          // filename: file.originalname,
+          // filesize: file.size,
+          userId: req.body.userId || null, // Associate with user if provided
+        })
+        .returning();
 
       // Return success response
       res.status(201).json({
