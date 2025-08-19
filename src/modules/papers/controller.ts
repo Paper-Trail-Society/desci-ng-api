@@ -1,4 +1,4 @@
-import * as z from 'zod';
+import * as fs from 'fs';
 import type { Request, Response } from "express";
 import { uploadPaper } from './schema';
 import { ipfsService } from 'utils/ipfs';
@@ -11,10 +11,7 @@ interface MulterRequest extends Request {
 
 
 export class PapersController {
-  // Create method
   async create(req: MulterRequest, res: Response) {
-
-    console.log(req.body)
     const body = uploadPaper.parse(req.body);
 
 
@@ -35,22 +32,24 @@ export class PapersController {
       });
 
 
-    // upload file to Pinata
-    const ipfsResponse = await ipfsService.uploadFile(new File([file.buffer], file.originalname, { type: file.mimetype }));
+    const fileBlob = new Blob([fs.readFileSync(req.file.path)]);
+
+    const ipfsResponse = await ipfsService.uploadFile(
+      new File([fileBlob], file.originalname, { type: file.mimetype }),
+    );
 
     // {
     //     ipfsResponse: {
-    //       id: '0198bf52-0805-7164-bcaa-fb1323768955',
+    //       id: '0198c2b9-41cc-7743-aa32-63e44fb60ddc',
     //       name: 'Complete Computer Science Self-Learning Path with Resources.pdf',
-    //       size: 9,
+    //       size: 370188,
     //       mime_type: 'application/pdf',
-    //       cid: 'bafkreihlaroxruttcbzurmbqbqa5fg3vkllcfk54n6xydm7mku2zvkmvbq',
+    //       cid: 'bafybeidezwnftflonhxsffi7so4nzqtgdmovrm2v7wzxm4kql7scumjiai',
     //       network: 'public',
-    //       is_duplicate: true,
     //       number_of_files: 1,
     //       streamable: false,
-    //       created_at: '2025-08-18T22:34:41.819Z',
-    //       updated_at: '2025-08-18T22:34:41.819Z'
+    //       created_at: '2025-08-19T14:26:19.273Z',
+    //       updated_at: '2025-08-19T14:26:19.273Z'
     //     }
     //   }
 
@@ -64,12 +63,13 @@ export class PapersController {
         .insert(papersTable)
         .values({
           title: body.title,
-          field: body.field,
+          fieldId: body.fieldId,
           abstract: body.abstract,
-          category: body.category,
+          categoryId: body.categoryId,
           keywords: body.keywords,
           notes: body.notes,
           ipfsCid: ipfsResponse.cid,
+          ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`,
           userId, 
         })
         .returning();
