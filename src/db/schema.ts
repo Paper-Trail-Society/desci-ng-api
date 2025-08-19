@@ -1,4 +1,13 @@
-import { integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -7,18 +16,50 @@ export const usersTable = pgTable("users", {
   email: text("email").notNull().unique(),
 });
 
-export const papersTable = pgTable("papers", {
+export const papersTable = pgTable(
+  "papers",
+  {
+    id: serial("id").primaryKey(),
+    title: text("title").notNull(),
+    notes: text("notes").notNull(),
+    abstract: text("abstract").notNull(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    field: text("field").notNull(),
+    category: text("category").notNull(),
+    keywords: jsonb("keywords").notNull(),
+    ipfsCid: text("ipfs_cid").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("title_idx").on(table.title),
+    index("abstract_idx").on(table.abstract),
+    index("keywords_gin_idx").using("gin", table.keywords),
+    index("search_index").using(
+      "gin",
+      sql`(
+        setweight(to_tsvector('english', ${table.title}), 'A') ||
+        setweight(to_tsvector('english', ${table.abstract}), 'B')
+    )`
+    ),
+  ]
+);
+
+export const fieldsTable = pgTable("fields", {
   id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  content: text("content").notNull(),
-  abstract: text("abstract").notNull(),
-  userId: integer("user_id")
+  name: text("name").notNull(),
+});
+
+export const categoriesTable = pgTable("categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  fieldId: integer("field_id")
     .notNull()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
+    .references(() => fieldsTable.id, { onDelete: "cascade" }),
 });
 
 export type InsertUser = typeof usersTable.$inferInsert;
