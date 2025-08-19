@@ -7,6 +7,7 @@ import {
   serial,
   text,
   timestamp,
+  varchar,
 } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
@@ -16,21 +17,22 @@ export const usersTable = pgTable("users", {
   email: text("email").notNull().unique(),
 });
 
+
 export const papersTable = pgTable(
   "papers",
   {
     id: serial("id").primaryKey(),
-    title: text("title").notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
     notes: text("notes").notNull(),
     abstract: text("abstract").notNull(),
     userId: integer("user_id")
       .notNull()
       .references(() => usersTable.id, { onDelete: "cascade" }),
     fieldId: integer("field_id").notNull().references(() => fieldsTable.id),
-    categoryId: integer("categoryId").notNull().references(() => categoriesTable.id),
+    categoryId: integer("category_id").notNull().references(() => categoriesTable.id),
     keywords: jsonb("keywords").notNull(),
-    ipfsCid: text("ipfs_cid").notNull(),
-    ipfsUrl: text("ipfs_url").notNull(),
+    ipfsCid: varchar("ipfs_cid", { length: 50}).notNull(),
+    ipfsUrl: varchar("ipfs_url", { length: 255}).notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
@@ -41,6 +43,7 @@ export const papersTable = pgTable(
     index("abstract_idx").on(table.abstract),
     index("field_id_idx").on(table.fieldId),
     index("category_id_idx").on(table.categoryId),
+    index("user_id_idx").on(table.userId),
 
     index("keywords_gin_idx").using("gin", table.keywords),
     index("search_index").using(
@@ -55,12 +58,12 @@ export const papersTable = pgTable(
 
 export const fieldsTable = pgTable("fields", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
+  name: varchar("name", { length: 100}).notNull(),
 });
 
 export const categoriesTable = pgTable("categories", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
+  name: varchar("name", { length: 100}).notNull(),
   fieldId: integer("field_id")
     .notNull()
     .references(() => fieldsTable.id, { onDelete: "cascade" }),

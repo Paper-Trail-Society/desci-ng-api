@@ -8,6 +8,13 @@
       "when": 1755207979591,
       "tag": "0000_futuristic_gambit",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1755646814635,
+      "tag": "0001_magical_naoko",
+      "breakpoints": true
     }
   ]
 }
