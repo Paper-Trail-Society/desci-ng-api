@@ -8,7 +8,7 @@ const db_1 = require("./utils/db");
 const schema_1 = require("./db/schema");
 require("multer");
 const multer_1 = __importDefault(require("multer"));
-const pinata_1 = require("./db/pinata");
+const route_1 = require("modules/papers/route");
 const upload = (0, multer_1.default)({ dest: "uploads/" });
 const isServerless = process.env.NETLIFY === "true" || process.env.NODE_ENV === "production";
 const app = (0, express_1.default)();
@@ -25,6 +25,7 @@ app.use((req, res, next) => {
     }
     next();
 });
+app.use(route_1.papersRouter);
 app.get("/", (req, res) => {
     res.send("DeSci API - Decentralized Science Platform");
 });
@@ -37,81 +38,6 @@ app.get("/health", async (req, res) => {
     catch (error) {
         console.error("Health check failed:", error);
         res.status(500).json({ status: "unhealthy", database: "disconnected" });
-    }
-});
-app.post("/files/upload", upload.single("pdfFile"), async (req, res) => {
-    try {
-        // Log request details for debugging
-        console.log("Upload request received");
-        console.log("Request body:", req.body);
-        console.log("File received:", req.file ? "Yes" : "No");
-        if (!req.file) {
-            return res.status(400).json({
-                status: "error",
-                message: "No PDF file uploaded",
-            });
-        }
-        const { title, abstract } = req.body;
-        if (!title) {
-            return res.status(400).json({
-                status: "error",
-                message: "PDF title is required",
-            });
-        }
-        // Get file information
-        const file = req.file;
-        console.log("File details:", {
-            filename: file.originalname,
-            size: file.size,
-            mimetype: file.mimetype,
-            path: file.path,
-        });
-        // Upload to Pinata
-        const metadata = {
-            title,
-            abstract: abstract || "",
-            originalFilename: file.originalname,
-            contentType: file.mimetype,
-        };
-        // @ts-ignore
-        const pinataResponse = await pinata_1.pinata.upload.public.file(file);
-        console.log("Pinata response:", pinataResponse);
-        // Store document information in database
-        const [newDocument] = await db_1.db
-            .insert(schema_1.papersTable)
-            .values({
-            title,
-            abstract: abstract || null,
-            content: "placeholder",
-            // ipfsHash: pinataResponse.ipfsHash,
-            // filename: file.originalname,
-            // filesize: file.size,
-            userId: req.body.userId || null, // Associate with user if provided
-        })
-            .returning();
-        // Return success response
-        res.status(201).json({
-            status: "success",
-            message: "PDF uploaded successfully",
-            document: {
-                id: newDocument.id,
-                title: newDocument.title,
-                abstract: newDocument.abstract,
-                // ipfsHash: newDocument.ipfsHash,
-                // ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${newDocument.ipfsHash}`,
-                // filename: newDocument.filename,
-                // filesize: newDocument.filesize,
-                // createdAt: newDocument.createdAt,
-            },
-        });
-    }
-    catch (error) {
-        console.error("PDF upload failed:", error);
-        res.status(500).json({
-            status: "error",
-            message: "Failed to upload PDF. Please check your connection and try again",
-            error: error instanceof Error ? error.message : String(error),
-        });
     }
 });
 if (process.env.NETLIFY !== "true" && process.env.NODE_ENV !== "production") {
