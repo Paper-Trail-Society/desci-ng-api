@@ -28,10 +28,9 @@ export const papersTable = pgTable(
     userId: integer("user_id")
       .notNull()
       .references(() => usersTable.id, { onDelete: "cascade" }),
-    fieldId: integer("field_id").notNull().references(() => fieldsTable.id),
     categoryId: integer("category_id").notNull().references(() => categoriesTable.id),
     keywords: jsonb("keywords").notNull(),
-    ipfsCid: varchar("ipfs_cid", { length: 50}).notNull(),
+    ipfsCid: varchar("ipfs_cid", { length: 80}).notNull(),
     ipfsUrl: varchar("ipfs_url", { length: 255}).notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
@@ -41,7 +40,6 @@ export const papersTable = pgTable(
   (table) => [
     index("title_idx").on(table.title),
     index("abstract_idx").on(table.abstract),
-    index("field_id_idx").on(table.fieldId),
     index("category_id_idx").on(table.categoryId),
     index("user_id_idx").on(table.userId),
 
