@@ -1,5 +1,5 @@
 {
-  "id": "ff7d49ae-d3c8-4e7a-b1ae-8bc33757640b",
+  "id": "a31c4a81-7e75-4768-9567-7ba50fd187f2",
   "prevId": "5d3446fd-af4a-4687-a7e0-dfc09c5b10c7",
   "version": "7",
   "dialect": "postgresql",
@@ -108,12 +108,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "field_id": {
-          "name": "field_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
         "category_id": {
           "name": "category_id",
           "type": "integer",
@@ -128,7 +122,7 @@
         },
         "ipfs_cid": {
           "name": "ipfs_cid",
-          "type": "varchar(50)",
+          "type": "varchar(80)",
           "primaryKey": false,
           "notNull": true
         },
@@ -173,21 +167,6 @@
           "columns": [
             {
               "expression": "abstract",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "field_id_idx": {
-          "name": "field_id_idx",
-          "columns": [
-            {
-              "expression": "field_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -271,19 +250,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "papers_field_id_fields_id_fk": {
-          "name": "papers_field_id_fields_id_fk",
-          "tableFrom": "papers",
-          "tableTo": "fields",
-          "columnsFrom": [
-            "field_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
           "onUpdate": "no action"
         },
         "papers_category_id_categories_id_fk": {

@@ -1,25 +1,29 @@
-import { ZodObject, ZodError } from "zod";
+import { ZodError, ZodObject } from "zod";
 import { Request, Response, NextFunction } from "express";
 
 /**
  * Middleware to validate request data against a provided schema.
- *
- * @param {ZodObject} schema - The Zod schema to validate against.
- * @return {Function} The middleware function.
  */
 export const validateRequest =
-  (schema: ZodObject) => (req: Request, res: Response, next: NextFunction) => {
+  (
+    inputType: "query" | "body",
+    schema: ZodObject
+  ) =>
+  async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
-      schema.parse(req.body);
+      const inputTypeToValidationMap = {
+        body: req.body,
+        query: req.query,
+      };
+      await schema.parseAsync(inputTypeToValidationMap[inputType]);
       next();
     } catch (err) {
-        console.log(req.body)
       if (err instanceof ZodError) {
-        const formattedErrors = err.issues.map((issue) => ({
-          path: issue.path.join("."),
-          message: issue.message,
-        }));
-
+        const formattedErrors = err.format();
         return res.status(400).json({
           errors: formattedErrors,
         });
@@ -28,3 +32,4 @@ export const validateRequest =
       next(err); // Pass unknown errors to default error handler
     }
   };
+

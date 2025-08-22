@@ -60,11 +60,12 @@ const seedFieldsAndCategoriesTable = async () => {
     ],
   };
 
-  Object.keys(fieldsToCategoriesMap).forEach(async (field) => {
+
+  for (const field of Object.keys(fieldsToCategoriesMap)) {
     console.log(`Processing field: ${field}`);
 
-    const [existingFieldDoc] = await db
-      .select({ id: fieldsTable.id })
+   const [existingFieldDoc] = await db
+      .select()
       .from(fieldsTable)
       .where(eq(fieldsTable.name, field))
       .execute();
@@ -97,7 +98,9 @@ const seedFieldsAndCategoriesTable = async () => {
     }
 
     if (categoriesToInsert.length > 0) {
-      console.log(`Inserting ${categoriesToInsert.length} categories for field: ${field}`);
+      console.log(
+        `Inserting ${categoriesToInsert.length} categories for field: ${field}`
+      );
       await db
         .insert(categoriesTable)
         .values(
@@ -109,7 +112,7 @@ const seedFieldsAndCategoriesTable = async () => {
         .returning()
         .execute();
     }
-  });
+  };
 
   console.log("Fields and categories tables seeding complete!");
   process.exit(0);
