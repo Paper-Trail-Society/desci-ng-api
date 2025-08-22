@@ -2,7 +2,7 @@ import { Router } from "express";
 import { PapersController } from "./controller";
 import multer from "multer";
 import { validateRequest } from "middlewares/validate-request";
-import { uploadPaper } from "./schema";
+import { uploadPaper, fetchPapersQueryParams } from "./schema";
 
 export const papersRouter = Router();
 const papersController = new PapersController();
@@ -28,10 +28,8 @@ const upload = multer({
 papersRouter.post(
   "/papers",
   upload.single("pdfFile"),
-  validateRequest(uploadPaper),
+  validateRequest("body", uploadPaper),
   async (req, res) => papersController.create(req, res)
 );
 
-papersRouter.get("/papers", async (req, res) => {
-  return res.json(["paper 1", "paper 2"]);
-});
+papersRouter.get("/papers", validateRequest('query', fetchPapersQueryParams), async (req, res) => papersController.index(req, res));
