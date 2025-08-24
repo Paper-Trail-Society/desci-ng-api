@@ -1,17 +1,11 @@
 import * as fs from "fs";
 import type { Request, Response } from "express";
-import { fetchPapersQueryParams, uploadPaper } from "./schema";
+import { fetchPapersQueryParams, updatePaper, uploadPaper } from "./schema";
 import { ipfsService } from "utils/ipfs";
 import { db } from "utils/db";
-import {
-  categoriesTable,
-  fieldsTable,
-  papersTable,
-  usersTable,
-} from "db/schema";
-import { and, desc, eq, gt, sql, count as drizzleCount } from "drizzle-orm";
-import { PgSelectQueryBuilder } from "drizzle-orm/pg-core";
-import { count } from "console";
+import { UpdatePaper, categoriesTable, fieldsTable, papersTable } from "db/schema";
+import { desc, eq, sql, count as drizzleCount } from "drizzle-orm";
+import z from "zod";
 
 interface MulterRequest extends Request {
   file?: Express.Multer.File;
@@ -127,13 +121,11 @@ export class PapersController {
     }
 
     if (categoryId) {
-      // conditions["categoryId"] = eq(papersTable.categoryId, categoryId);
       baseQuery = baseQuery.where(eq(papersTable.categoryId, categoryId));
       countQuery = countQuery.where(eq(papersTable.categoryId, categoryId));
     }
 
     if (search) {
-
       // TODO: Use full-text search + fuzzy matching
       baseQuery = baseQuery.where(sql`(
         ${papersTable.title} ILIKE ${`${search}%`} OR
@@ -178,12 +170,80 @@ export class PapersController {
     return res.status(200).json(response);
   }
 
-  // Update method
   async update(req: Request, res: Response) {
-    // no-op
+    const body = updatePaper.parse(req.body);
+    const { id: paperId } = z
+      .object({ id: z.preprocess((v) => Number(v), z.number()) })
+      .parse(req.params);
+    const updatePayload: Record<keyof UpdatePaper, any> = {
+      title: undefined,
+      notes: undefined,
+      abstract: undefined,
+      userId: undefined,
+      categoryId: undefined,
+      keywords: undefined,
+      ipfsCid: undefined,
+      ipfsUrl: undefined
+    };
+
+    if (body.title) {
+      updatePayload["title"] = body.title;
+    }
+
+    if (body.abstract) {
+      updatePayload["abstract"] = body.abstract;
+    }
+
+    if (body.categoryId) {
+      const [categoryExists] = await db
+        .select({ id: categoriesTable.id })
+        .from(categoriesTable)
+        .where(eq(categoriesTable.id, body.categoryId))
+        .limit(1)
+        .execute();
+
+      if (!categoryExists) {
+        return res.status(400).json({
+          errors: {
+            categoryId: "Category does not exist",
+          },
+        });
+      }
+
+      updatePayload["categoryId"] = body.categoryId;
+    }
+
+    if (body.keywords) {
+      updatePayload["keywords"] = body.keywords;
+    }
+
+    if (body.notes) {
+      updatePayload["notes"] = body.notes;
+    }
+
+    if (req.file) {
+      const fileBlob = new Blob([fs.readFileSync(req.file.path)]);
+
+      const ipfsResponse = await ipfsService.uploadFile(
+        new File([fileBlob], req.file.originalname, { type: req.file.mimetype })
+      );
+
+      updatePayload["ipfsCid"] = ipfsResponse.cid;
+      updatePayload[
+        "ipfsUrl"
+      ] = `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`;
+    }
+
+    // Update paper in DB
+    const [updatedPaper] = await db
+      .update(papersTable)
+      .set(updatePayload)
+      .where(eq(papersTable.id, paperId))
+      .returning();
+
+    return res.status(200).json(updatedPaper);
   }
 
-  // Delete method
   async delete(req: Request, res: Response) {
     // no-op
   }

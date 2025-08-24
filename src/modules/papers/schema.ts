@@ -16,3 +16,11 @@ export const fetchPapersQueryParams = z.object({
     page: z.preprocess((v) => Number(v), z.number()).optional().default(1),
     size: z.preprocess((v) => Number(v), z.number()).optional().default(10)
 });
+
+export const updatePaper = z.object({
+    title: z.string().optional(),
+    abstract: z.string().optional(),
+    categoryId: z.preprocess((v) => Number(v), z.number()).optional(),
+    keywords: z.array(z.string()).optional(),
+    notes: z.string().optional()
+}); 

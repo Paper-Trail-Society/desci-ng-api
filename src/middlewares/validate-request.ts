@@ -6,8 +6,8 @@ import { Request, Response, NextFunction } from "express";
  */
 export const validateRequest =
   (
-    inputType: "query" | "body",
-    schema: ZodObject
+    inputSource: "query" | "body" | "params",
+    schema: ZodObject<any>
   ) =>
   async (
     req: Request,
@@ -15,11 +15,12 @@ export const validateRequest =
     next: NextFunction
   ) => {
     try {
-      const inputTypeToValidationMap = {
+      const inputSourceToValidationMap = {
+        params: req.params,
         body: req.body,
         query: req.query,
       };
-      await schema.parseAsync(inputTypeToValidationMap[inputType]);
+      await schema.parseAsync(inputSourceToValidationMap[inputSource]);
       next();
     } catch (err) {
       if (err instanceof ZodError) {
