@@ -71,4 +71,5 @@ export type InsertUser = typeof usersTable.$inferInsert;
 export type SelectUser = typeof usersTable.$inferSelect;
 
 export type InsertPaper = typeof papersTable.$inferInsert;
+export type UpdatePaper = Omit<InsertPaper, 'id' | 'createdAt' | 'updatedAt'>;
 export type SelectPaper = typeof papersTable.$inferSelect;
