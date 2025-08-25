@@ -60,11 +60,10 @@ const seedFieldsAndCategoriesTable = async () => {
     ],
   };
 
-
   for (const field of Object.keys(fieldsToCategoriesMap)) {
     console.log(`Processing field: ${field}`);
 
-   const [existingFieldDoc] = await db
+    const [existingFieldDoc] = await db
       .select()
       .from(fieldsTable)
       .where(eq(fieldsTable.name, field))
@@ -75,7 +74,12 @@ const seedFieldsAndCategoriesTable = async () => {
       (
         await db
           .insert(fieldsTable)
-          .values({ name: field })
+          .values({
+            name: field,
+            title: field,
+            abstract: `Research field focused on ${field}`,
+            content: `This field encompasses research and studies related to ${field}`,
+          })
           .returning()
           .execute()
       )[0];
@@ -99,7 +103,7 @@ const seedFieldsAndCategoriesTable = async () => {
 
     if (categoriesToInsert.length > 0) {
       console.log(
-        `Inserting ${categoriesToInsert.length} categories for field: ${field}`
+        `Inserting ${categoriesToInsert.length} categories for field: ${field}`,
       );
       await db
         .insert(categoriesTable)
@@ -107,12 +111,12 @@ const seedFieldsAndCategoriesTable = async () => {
           categoriesToInsert.map((category) => ({
             name: category,
             fieldId: fieldDoc.id,
-          }))
+          })),
         )
         .returning()
         .execute();
     }
-  };
+  }
 
   console.log("Fields and categories tables seeding complete!");
   process.exit(0);
@@ -126,4 +130,3 @@ main().catch((err) => {
   console.error("❌ Unhandled error during database seeding:", err);
   process.exit(1);
 });
-
