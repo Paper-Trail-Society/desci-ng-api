@@ -15,6 +15,13 @@
       "when": 1755791920535,
       "tag": "0001_lush_groot",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1756121763228,
+      "tag": "0002_aspiring_dragon_lord",
+      "breakpoints": true
     }
   ]
 }
