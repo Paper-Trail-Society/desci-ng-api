@@ -149,7 +149,6 @@ app.post("/files/upload", auth_2.requireAuth, upload.single("pdfFile"), async (r
         const pinataResponse = await pinata_1.pinata.upload.public.file(file);
         console.log("Pinata response:", pinataResponse);
         // Store document information in database
-        // Use the authenticated user's ID instead of body parameter
         const [newDocument] = await db_1.db
             .insert(schema_1.papersTable)
             .values({
