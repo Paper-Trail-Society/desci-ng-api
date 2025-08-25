@@ -4,6 +4,7 @@ import multer from "multer";
 import { validateRequest } from "middlewares/validate-request";
 import { uploadPaper, fetchPapersQueryParams, updatePaper } from "./schema";
 import z from "zod";
+import { requireAuth } from "../../middlewares/auth";
 
 export const papersRouter = Router();
 const papersController = new PapersController();
@@ -28,18 +29,26 @@ const upload = multer({
 
 papersRouter.post(
   "/papers",
+  requireAuth,
   upload.single("pdfFile"),
   validateRequest("body", uploadPaper),
-  async (req, res) => papersController.create(req, res)
+  async (req, res) => papersController.create(req, res),
 );
 
-papersRouter.get("/papers", validateRequest('query', fetchPapersQueryParams), async (req, res) => papersController.index(req, res));
+papersRouter.get(
+  "/papers",
+  validateRequest("query", fetchPapersQueryParams),
+  async (req, res) => papersController.index(req, res),
+);
 
 papersRouter.put(
   "/papers/:id",
-  validateRequest("params", z.object({ id: z.preprocess((v) => Number(v), z.number()) })),
+  requireAuth,
+  validateRequest(
+    "params",
+    z.object({ id: z.preprocess((v) => Number(v), z.number()) }),
+  ),
   upload.single("pdfFile"),
   validateRequest("body", updatePaper),
-  async (req, res) => papersController.update(req, res)
+  async (req, res) => papersController.update(req, res),
 );
-
