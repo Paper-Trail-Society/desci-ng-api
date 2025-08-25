@@ -24,6 +24,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file=.env dist/scripts/migrate.js",
     "db:check": "node --env-file=.env dist/scripts/check-schema.js",
+    "db:seed": "node --env-file=.env dist/scripts/seed.js",
     "db:studio": "drizzle-kit studio"
   },
   "keywords": [

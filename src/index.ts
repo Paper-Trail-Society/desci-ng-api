@@ -7,6 +7,7 @@ import multer from "multer";
 import { pinata } from "./db/pinata";
 import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
 import { auth } from "utils/auth";
+import { papersRouter } from "modules/papers/route";
 
 interface MulterRequest extends Request {
   file?: Express.Multer.File;
@@ -40,6 +41,8 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+app.use(papersRouter);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("DeSci API - Decentralized Science Platform");
