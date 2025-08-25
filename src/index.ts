@@ -27,6 +27,13 @@ const port = process.env.PORT || 3000;
 // such as express.json()
 app.all("/auth/{*any}", toNodeHandler(auth));
 
+app.get("/auth/me", async (req, res) => {
+  const session = await auth.api.getSession({
+    headers: fromNodeHeaders(req.headers),
+  });
+  return res.json(session);
+});
+
 // Increase the payload size limit for JSON and URL-encoded bodies
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ extended: true, limit: "100mb" }));
@@ -82,13 +89,6 @@ app.get("/health", async (req: Request, res: Response) => {
       authenticated: false,
     });
   }
-});
-
-app.get("/auth/me", async (req, res) => {
-  const session = await auth.api.getSession({
-    headers: fromNodeHeaders(req.headers),
-  });
-  return res.json(session);
 });
 
 // Protected endpoint to get current user's papers
