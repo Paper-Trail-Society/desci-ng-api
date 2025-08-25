@@ -56,30 +56,30 @@ app.get("/health", async (req: Request, res: Response) => {
     // Check database connection
     await db.select().from(usersTable);
 
-    // Check authentication status (optional)
-    let authStatus = "not_authenticated";
+    // Check if request is authenticated
+    let isAuthenticated = false;
     try {
       const session = await auth.api.getSession({
         headers: fromNodeHeaders(req.headers),
       });
       if (session) {
-        authStatus = "authenticated";
+        isAuthenticated = true;
       }
     } catch {
-      // Auth check failed, but health check can still pass
+      // Not authenticated
     }
 
     res.json({
       status: "healthy",
       database: "connected",
-      authentication: authStatus,
+      authenticated: isAuthenticated,
     });
   } catch (error) {
     console.error("Health check failed:", error);
     res.status(500).json({
       status: "unhealthy",
       database: "disconnected",
-      authentication: "unknown",
+      authenticated: false,
     });
   }
 });
