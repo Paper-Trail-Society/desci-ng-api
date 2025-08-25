@@ -14,7 +14,7 @@ import {
 export const usersTable = pgTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  age: integer("age").notNull(),
+  age: integer("age"),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified")
     .$defaultFn(() => false)
