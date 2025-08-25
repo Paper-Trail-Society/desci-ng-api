@@ -12,6 +12,8 @@ const pinata_1 = require("./db/pinata");
 const node_1 = require("better-auth/node");
 const auth_1 = require("utils/auth");
 const route_1 = require("modules/papers/route");
+const auth_2 = require("./middlewares/auth");
+const drizzle_orm_1 = require("drizzle-orm");
 const upload = (0, multer_1.default)({ dest: "uploads/" });
 const isServerless = process.env.NETLIFY === "true" || process.env.NODE_ENV === "production";
 const app = (0, express_1.default)();
@@ -39,12 +41,34 @@ app.get("/", (req, res) => {
 // Health check endpoint
 app.get("/health", async (req, res) => {
     try {
+        // Check database connection
         await db_1.db.select().from(schema_1.usersTable);
-        res.json({ status: "healthy", database: "connected" });
+        // Check authentication status (optional)
+        let authStatus = "not_authenticated";
+        try {
+            const session = await auth_1.auth.api.getSession({
+                headers: (0, node_1.fromNodeHeaders)(req.headers),
+            });
+            if (session) {
+                authStatus = "authenticated";
+            }
+        }
+        catch {
+            // Auth check failed, but health check can still pass
+        }
+        res.json({
+            status: "healthy",
+            database: "connected",
+            authentication: authStatus,
+        });
     }
     catch (error) {
         console.error("Health check failed:", error);
-        res.status(500).json({ status: "unhealthy", database: "disconnected" });
+        res.status(500).json({
+            status: "unhealthy",
+            database: "disconnected",
+            authentication: "unknown",
+        });
     }
 });
 app.get("/auth/me", async (req, res) => {
@@ -53,12 +77,46 @@ app.get("/auth/me", async (req, res) => {
     });
     return res.json(session);
 });
-app.post("/files/upload", upload.single("pdfFile"), async (req, res) => {
+// Protected endpoint to get current user's papers
+app.get("/papers/my", auth_2.requireAuth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        // Fetch all papers belonging to the authenticated user
+        const userPapers = await db_1.db
+            .select()
+            .from(schema_1.papersTable)
+            .where((0, drizzle_orm_1.eq)(schema_1.papersTable.userId, userId));
+        res.json({
+            status: "success",
+            papers: userPapers.map((paper) => ({
+                id: paper.id,
+                title: paper.title,
+                abstract: paper.abstract,
+                keywords: paper.keywords,
+                ipfsCid: paper.ipfsCid,
+                ipfsUrl: paper.ipfsUrl,
+                createdAt: paper.createdAt,
+                updatedAt: paper.updatedAt,
+            })),
+            count: userPapers.length,
+        });
+    }
+    catch (error) {
+        console.error("Failed to fetch user papers:", error);
+        res.status(500).json({
+            status: "error",
+            message: "Failed to retrieve your papers",
+            error: error instanceof Error ? error.message : String(error),
+        });
+    }
+});
+app.post("/files/upload", auth_2.requireAuth, upload.single("pdfFile"), async (req, res) => {
     try {
         // Log request details for debugging
         console.log("Upload request received");
         console.log("Request body:", req.body);
         console.log("File received:", req.file ? "Yes" : "No");
+        console.log("Authenticated user:", req.user?.email);
         if (!req.file) {
             return res.status(400).json({
                 status: "error",
@@ -91,16 +149,18 @@ app.post("/files/upload", upload.single("pdfFile"), async (req, res) => {
         const pinataResponse = await pinata_1.pinata.upload.public.file(file);
         console.log("Pinata response:", pinataResponse);
         // Store document information in database
+        // Use the authenticated user's ID instead of body parameter
         const [newDocument] = await db_1.db
             .insert(schema_1.papersTable)
             .values({
             title,
-            abstract: abstract || null,
-            content: "placeholder",
-            // ipfsHash: pinataResponse.ipfsHash,
-            // filename: file.originalname,
-            // filesize: file.size,
-            userId: req.body.userId || null, // Associate with user if provided
+            notes: "",
+            abstract: abstract || "",
+            userId: req.user.id, // Use authenticated user's ID
+            categoryId: 1, // Default category - you may want to make this configurable
+            keywords: JSON.stringify([]),
+            ipfsCid: pinataResponse.cid || "placeholder",
+            ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${pinataResponse.cid || "placeholder"}`,
         })
             .returning();
         // Return success response

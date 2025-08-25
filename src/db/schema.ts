@@ -79,7 +79,7 @@ export const papersTable = pgTable(
     title: varchar("title", { length: 255 }).notNull(),
     notes: text("notes").notNull(),
     abstract: text("abstract").notNull(),
-    userId: integer("user_id")
+    userId: text("user_id")
       .notNull()
       .references(() => usersTable.id, { onDelete: "cascade" }),
     categoryId: integer("category_id")

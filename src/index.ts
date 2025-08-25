@@ -8,8 +8,10 @@ import { pinata } from "./db/pinata";
 import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
 import { auth } from "utils/auth";
 import { papersRouter } from "modules/papers/route";
+import { requireAuth, type AuthenticatedRequest } from "./middlewares/auth";
+import { eq } from "drizzle-orm";
 
-interface MulterRequest extends Request {
+interface MulterRequest extends AuthenticatedRequest {
   file?: Express.Multer.File;
 }
 
@@ -51,11 +53,34 @@ app.get("/", (req: Request, res: Response) => {
 // Health check endpoint
 app.get("/health", async (req: Request, res: Response) => {
   try {
+    // Check database connection
     await db.select().from(usersTable);
-    res.json({ status: "healthy", database: "connected" });
+
+    // Check authentication status (optional)
+    let authStatus = "not_authenticated";
+    try {
+      const session = await auth.api.getSession({
+        headers: fromNodeHeaders(req.headers),
+      });
+      if (session) {
+        authStatus = "authenticated";
+      }
+    } catch {
+      // Auth check failed, but health check can still pass
+    }
+
+    res.json({
+      status: "healthy",
+      database: "connected",
+      authentication: authStatus,
+    });
   } catch (error) {
     console.error("Health check failed:", error);
-    res.status(500).json({ status: "unhealthy", database: "disconnected" });
+    res.status(500).json({
+      status: "unhealthy",
+      database: "disconnected",
+      authentication: "unknown",
+    });
   }
 });
 
@@ -66,8 +91,48 @@ app.get("/auth/me", async (req, res) => {
   return res.json(session);
 });
 
+// Protected endpoint to get current user's papers
+app.get(
+  "/papers/my",
+  requireAuth,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user!.id;
+
+      // Fetch all papers belonging to the authenticated user
+      const userPapers = await db
+        .select()
+        .from(papersTable)
+        .where(eq(papersTable.userId, userId));
+
+      res.json({
+        status: "success",
+        papers: userPapers.map((paper) => ({
+          id: paper.id,
+          title: paper.title,
+          abstract: paper.abstract,
+          keywords: paper.keywords,
+          ipfsCid: paper.ipfsCid,
+          ipfsUrl: paper.ipfsUrl,
+          createdAt: paper.createdAt,
+          updatedAt: paper.updatedAt,
+        })),
+        count: userPapers.length,
+      });
+    } catch (error) {
+      console.error("Failed to fetch user papers:", error);
+      res.status(500).json({
+        status: "error",
+        message: "Failed to retrieve your papers",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  },
+);
+
 app.post(
   "/files/upload",
+  requireAuth,
   upload.single("pdfFile"),
   async (req: MulterRequest, res: Response) => {
     try {
@@ -75,6 +140,7 @@ app.post(
       console.log("Upload request received");
       console.log("Request body:", req.body);
       console.log("File received:", req.file ? "Yes" : "No");
+      console.log("Authenticated user:", req.user?.email);
 
       if (!req.file) {
         return res.status(400).json({
@@ -118,12 +184,13 @@ app.post(
         .insert(papersTable)
         .values({
           title,
-          abstract: abstract || null,
-          content: "placeholder",
-          // ipfsHash: pinataResponse.ipfsHash,
-          // filename: file.originalname,
-          // filesize: file.size,
-          userId: req.body.userId || null, // Associate with user if provided
+          notes: "",
+          abstract: abstract || "",
+          userId: req.user!.id, // Use authenticated user's ID
+          categoryId: 1, // Default category - you may want to make this configurable
+          keywords: JSON.stringify([]),
+          ipfsCid: pinataResponse.cid || "placeholder",
+          ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${pinataResponse.cid || "placeholder"}`,
         })
         .returning();
 

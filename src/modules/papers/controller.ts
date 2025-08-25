@@ -3,11 +3,17 @@ import type { Request, Response } from "express";
 import { fetchPapersQueryParams, updatePaper, uploadPaper } from "./schema";
 import { ipfsService } from "utils/ipfs";
 import { db } from "utils/db";
-import { UpdatePaper, categoriesTable, fieldsTable, papersTable } from "db/schema";
+import {
+  UpdatePaper,
+  categoriesTable,
+  fieldsTable,
+  papersTable,
+} from "db/schema";
 import { desc, eq, sql, count as drizzleCount } from "drizzle-orm";
 import z from "zod";
+import type { AuthenticatedRequest } from "../../middlewares/auth";
 
-interface MulterRequest extends Request {
+interface MulterRequest extends AuthenticatedRequest {
   file?: Express.Multer.File;
 }
 
@@ -34,7 +40,7 @@ export class PapersController {
     const fileBlob = new Blob([fs.readFileSync(req.file.path)]);
 
     const ipfsResponse = await ipfsService.uploadFile(
-      new File([fileBlob], file.originalname, { type: file.mimetype })
+      new File([fileBlob], file.originalname, { type: file.mimetype }),
     );
 
     // {
@@ -53,7 +59,7 @@ export class PapersController {
     //   }
 
     console.log({ ipfsResponse });
-    const userId = 1; // should be the currently authenticated user
+    const userId = req.user!.id; // Use authenticated user's ID
 
     // Create paper in DB
     const [newPaper] = await db
@@ -106,7 +112,7 @@ export class PapersController {
       baseQuery = baseQuery
         .innerJoin(
           categoriesTable,
-          eq(papersTable.categoryId, categoriesTable.id)
+          eq(papersTable.categoryId, categoriesTable.id),
         )
         .innerJoin(fieldsTable, eq(categoriesTable.fieldId, fieldsTable.id))
         .where(eq(fieldsTable.id, fieldId));
@@ -114,7 +120,7 @@ export class PapersController {
       countQuery = countQuery
         .innerJoin(
           categoriesTable,
-          eq(papersTable.categoryId, categoriesTable.id)
+          eq(papersTable.categoryId, categoriesTable.id),
         )
         .innerJoin(fieldsTable, eq(categoriesTable.fieldId, fieldsTable.id))
         .where(eq(fieldsTable.id, fieldId));
@@ -170,7 +176,7 @@ export class PapersController {
     return res.status(200).json(response);
   }
 
-  async update(req: Request, res: Response) {
+  async update(req: MulterRequest, res: Response) {
     const body = updatePaper.parse(req.body);
     const { id: paperId } = z
       .object({ id: z.preprocess((v) => Number(v), z.number()) })
@@ -183,7 +189,7 @@ export class PapersController {
       categoryId: undefined,
       keywords: undefined,
       ipfsCid: undefined,
-      ipfsUrl: undefined
+      ipfsUrl: undefined,
     };
 
     if (body.title) {
@@ -225,13 +231,32 @@ export class PapersController {
       const fileBlob = new Blob([fs.readFileSync(req.file.path)]);
 
       const ipfsResponse = await ipfsService.uploadFile(
-        new File([fileBlob], req.file.originalname, { type: req.file.mimetype })
+        new File([fileBlob], req.file.originalname, {
+          type: req.file.mimetype,
+        }),
       );
 
       updatePayload["ipfsCid"] = ipfsResponse.cid;
-      updatePayload[
-        "ipfsUrl"
-      ] = `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`;
+      updatePayload["ipfsUrl"] =
+        `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`;
+    }
+
+    // Verify the paper belongs to the authenticated user before updating
+    const [existingPaper] = await db
+      .select()
+      .from(papersTable)
+      .where(eq(papersTable.id, paperId));
+
+    if (!existingPaper) {
+      return res.status(404).json({
+        error: "Paper not found",
+      });
+    }
+
+    if (existingPaper.userId !== req.user!.id) {
+      return res.status(403).json({
+        error: "You don't have permission to update this paper",
+      });
     }
 
     // Update paper in DB

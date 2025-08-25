@@ -22,6 +22,13 @@
       "when": 1756121763228,
       "tag": "0002_aspiring_dragon_lord",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1756129458998,
+      "tag": "0003_thankful_songbird",
+      "breakpoints": true
     }
   ]
 }
