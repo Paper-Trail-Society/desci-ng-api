@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import type { Request, Response } from "express";
 import express from "express";
 import { papersRouter } from "modules/papers/route";
+import { fieldRouter } from "modules/fields/route";
 import "multer";
 import multer from "multer";
 import { auth } from "utils/auth";
@@ -11,6 +12,7 @@ import { pinata } from "./db/pinata";
 import { papersTable, usersTable } from "./db/schema";
 import { requireAuth, type AuthenticatedRequest } from "./middlewares/auth";
 import { db } from "./utils/db";
+
 
 interface MulterRequest extends AuthenticatedRequest {
   file?: Express.Multer.File;
@@ -60,6 +62,8 @@ app.use((req, res, next) => {
 });
 
 app.use(papersRouter);
+app.use(fieldRouter);
+
 
 app.get("/", (req: Request, res: Response) => {
   res.send("DeSci API - Decentralized Science Platform");
