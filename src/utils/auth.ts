@@ -1,8 +1,8 @@
-import { betterAuth, type User } from "better-auth";
+import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { openAPI } from "better-auth/plugins";
-import { db } from "./db";
 import * as schema from "../db/schema";
+import { db } from "./db";
 import { emailService } from "./email";
 
 export const auth = betterAuth({
@@ -33,7 +33,7 @@ export const auth = betterAuth({
       } catch (error) {
         console.error(
           `Failed to send password reset email to ${user.email}:`,
-          error,
+          error
         );
         throw error;
       }
@@ -52,7 +52,7 @@ export const auth = betterAuth({
       } catch (error) {
         console.error(
           `Failed to send verification email to ${user.email}:`,
-          error,
+          error
         );
         throw error;
       }

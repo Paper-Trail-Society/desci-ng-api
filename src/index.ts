@@ -1,15 +1,16 @@
-import express from "express";
+import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
+import cors from "cors";
+import { eq } from "drizzle-orm";
 import type { Request, Response } from "express";
-import { db } from "./utils/db";
-import { papersTable, usersTable } from "./db/schema";
+import express from "express";
+import { papersRouter } from "modules/papers/route";
 import "multer";
 import multer from "multer";
-import { pinata } from "./db/pinata";
-import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
 import { auth } from "utils/auth";
-import { papersRouter } from "modules/papers/route";
+import { pinata } from "./db/pinata";
+import { papersTable, usersTable } from "./db/schema";
 import { requireAuth, type AuthenticatedRequest } from "./middlewares/auth";
-import { eq } from "drizzle-orm";
+import { db } from "./utils/db";
 
 interface MulterRequest extends AuthenticatedRequest {
   file?: Express.Multer.File;
@@ -21,6 +22,13 @@ const isServerless =
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true, // Allow cookies, Authorization headers, etc.
+  })
+);
 
 // better-auth requires access to the raw request body to handle authentication requests correctly.
 // Therefore, the better-auth handler must be mounted before any middleware that parses the request body,
@@ -42,7 +50,7 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   );
   if (req.method === "OPTIONS") {
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH");
@@ -127,7 +135,7 @@ app.get(
         error: error instanceof Error ? error.message : String(error),
       });
     }
-  },
+  }
 );
 
 app.post(
@@ -190,7 +198,9 @@ app.post(
           categoryId: 1, // Default category - you may want to make this configurable
           keywords: JSON.stringify([]),
           ipfsCid: pinataResponse.cid || "placeholder",
-          ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${pinataResponse.cid || "placeholder"}`,
+          ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${
+            pinataResponse.cid || "placeholder"
+          }`,
         })
         .returning();
 
@@ -218,7 +228,7 @@ app.post(
         error: error instanceof Error ? error.message : String(error),
       });
     }
-  },
+  }
 );
 
 if (process.env.NETLIFY !== "true" && process.env.NODE_ENV !== "production") {

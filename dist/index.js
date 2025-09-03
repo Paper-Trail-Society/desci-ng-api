@@ -22,6 +22,12 @@ const port = process.env.PORT || 3000;
 // Therefore, the better-auth handler must be mounted before any middleware that parses the request body,
 // such as express.json()
 app.all("/auth/{*any}", (0, node_1.toNodeHandler)(auth_1.auth));
+app.get("/auth/me", async (req, res) => {
+    const session = await auth_1.auth.api.getSession({
+        headers: (0, node_1.fromNodeHeaders)(req.headers),
+    });
+    return res.json(session);
+});
 // Increase the payload size limit for JSON and URL-encoded bodies
 app.use(express_1.default.json({ limit: "100mb" }));
 app.use(express_1.default.urlencoded({ extended: true, limit: "100mb" }));
@@ -43,23 +49,23 @@ app.get("/health", async (req, res) => {
     try {
         // Check database connection
         await db_1.db.select().from(schema_1.usersTable);
-        // Check authentication status (optional)
-        let authStatus = "not_authenticated";
+        // Check if request is authenticated
+        let isAuthenticated = false;
         try {
             const session = await auth_1.auth.api.getSession({
                 headers: (0, node_1.fromNodeHeaders)(req.headers),
             });
             if (session) {
-                authStatus = "authenticated";
+                isAuthenticated = true;
             }
         }
         catch {
-            // Auth check failed, but health check can still pass
+            // Not authenticated
         }
         res.json({
             status: "healthy",
             database: "connected",
-            authentication: authStatus,
+            authenticated: isAuthenticated,
         });
     }
     catch (error) {
@@ -67,15 +73,9 @@ app.get("/health", async (req, res) => {
         res.status(500).json({
             status: "unhealthy",
             database: "disconnected",
-            authentication: "unknown",
+            authenticated: false,
         });
     }
-});
-app.get("/auth/me", async (req, res) => {
-    const session = await auth_1.auth.api.getSession({
-        headers: (0, node_1.fromNodeHeaders)(req.headers),
-    });
-    return res.json(session);
 });
 // Protected endpoint to get current user's papers
 app.get("/papers/my", auth_2.requireAuth, async (req, res) => {
