@@ -8,6 +8,7 @@ import {
   categoriesTable,
   fieldsTable,
   papersTable,
+  usersTable,
 } from "db/schema";
 import { desc, eq, sql, count as drizzleCount } from "drizzle-orm";
 import z from "zod";
@@ -99,8 +100,14 @@ export class PapersController {
         updatedAt: papersTable.updatedAt,
         categoryId: papersTable.categoryId,
         keywords: papersTable.keywords,
+        user: {
+          id: usersTable.id,
+          name: usersTable.name,
+          email: usersTable.email,
+        },
       })
       .from(papersTable)
+      .innerJoin(usersTable, eq(papersTable.userId, usersTable.id))
       .$dynamic();
 
     let countQuery = db
@@ -134,13 +141,13 @@ export class PapersController {
     if (search) {
       // TODO: Use full-text search + fuzzy matching
       baseQuery = baseQuery.where(sql`(
-        ${papersTable.title} ILIKE ${`${search}%`} OR
-        ${papersTable.abstract} ILIKE ${`${search}%`}
+        ${papersTable.title} ILIKE ${`%${search}%`} OR
+        ${papersTable.abstract} ILIKE ${`%${search}%`}
       )`);
 
       countQuery = countQuery.where(sql`(
-        ${papersTable.title} ILIKE ${`${search}%`} OR
-        ${papersTable.abstract} ILIKE ${`${search}%`}
+        ${papersTable.title} ILIKE ${`%${search}%`} OR
+        ${papersTable.abstract} ILIKE ${`%${search}%`}
       )`);
     }
 
