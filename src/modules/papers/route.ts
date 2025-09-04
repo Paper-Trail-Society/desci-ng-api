@@ -9,10 +9,6 @@ import { requireAuth } from "../../middlewares/auth";
 export const papersRouter = Router();
 const papersController = new PapersController();
 
-interface MulterRequest extends Request {
-  file?: Express.Multer.File;
-}
-
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 const upload = multer({

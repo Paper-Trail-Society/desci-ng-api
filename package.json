@@ -22,6 +22,7 @@
     "netlify:dev": "netlify dev",
     "netlify:deploy": "netlify deploy --prod",
     "postinstall": "npm run build",
+    "prepare:dev": "npm run db:generate && npm run db:migrate && npm run db:seed",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file=.env dist/scripts/migrate.js",
     "db:check": "node --env-file=.env dist/scripts/check-schema.js",

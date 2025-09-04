@@ -36,6 +36,20 @@
       "when": 1756139796984,
       "tag": "0004_petite_norman_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1756986355967,
+      "tag": "0005_magenta_mystique",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1756993035271,
+      "tag": "0006_sloppy_thena",
+      "breakpoints": true
     }
   ]
 }

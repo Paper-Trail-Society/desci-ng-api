@@ -7,10 +7,12 @@ import {
   UpdatePaper,
   categoriesTable,
   fieldsTable,
+  keywordsTable,
+  paperKeywordsTable,
   papersTable,
   usersTable,
 } from "db/schema";
-import { desc, eq, sql, count as drizzleCount } from "drizzle-orm";
+import { desc, eq, sql, count as drizzleCount, inArray } from "drizzle-orm";
 import z from "zod";
 import type { AuthenticatedRequest } from "../../middlewares/auth";
 
@@ -41,7 +43,7 @@ export class PapersController {
     const fileBlob = new Blob([fs.readFileSync(req.file.path)]);
 
     const ipfsResponse = await ipfsService.uploadFile(
-      new File([fileBlob], file.originalname, { type: file.mimetype }),
+      new File([fileBlob], file.originalname, { type: file.mimetype })
     );
 
     // {
@@ -69,13 +71,58 @@ export class PapersController {
         title: body.title,
         abstract: body.abstract,
         categoryId: body.categoryId,
-        keywords: body.keywords,
         notes: body.notes,
         ipfsCid: ipfsResponse.cid,
         ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`,
         userId,
       })
       .returning();
+
+    // get the ID of all keywords matching the keyword IDs in body.keywords with an SQL IN query
+    const keywordIdsInDB = await db
+      .select({ id: keywordsTable.id })
+      .from(keywordsTable)
+      .where(inArray(keywordsTable.id, body.keywords))
+      .execute();
+
+    // filter out the IDs that exists in body.keywords but not in keywordIds
+    const invalidKeywordIds = body.keywords.filter(
+      (id) => !keywordIdsInDB.find((keyword) => keyword.id === id)
+    );
+
+    if (invalidKeywordIds.length > 0) {
+      return res.status(400).json({
+        status: "error",
+        message: `Invalid keyword IDs: ${invalidKeywordIds.join(", ")}`,
+      });
+    }
+
+    const keywordIdsToMapToPaper: number[] = [
+      ...keywordIdsInDB.map(({ id }) => id),
+    ];
+
+    // create keyword in newKeywords if any
+    for (const keyword of body.newKeywords) {
+      const [{ id: keywordId }] = await db
+        .insert(keywordsTable)
+        .values({
+          name: keyword,
+        })
+        .returning({ id: keywordsTable.id });
+
+      keywordIdsToMapToPaper.push(keywordId);
+    }
+
+    // map keywords to the paper
+    for (const keywordId of body.keywords) {
+      await db
+        .insert(paperKeywordsTable)
+        .values({
+          paperId: newPaper.id,
+          keywordId,
+        })
+        .returning();
+    }
 
     return res.status(201).json(newPaper);
   }
@@ -99,15 +146,27 @@ export class PapersController {
         createdAt: papersTable.createdAt,
         updatedAt: papersTable.updatedAt,
         categoryId: papersTable.categoryId,
-        keywords: papersTable.keywords,
         user: {
           id: usersTable.id,
           name: usersTable.name,
           email: usersTable.email,
         },
+        keywords: sql<any>`json_agg(json_build_object(
+          'id', ${keywordsTable.id},
+          'name', ${keywordsTable.name},
+          'aliases', ${keywordsTable.aliases}
+        ))`,
       })
       .from(papersTable)
       .innerJoin(usersTable, eq(papersTable.userId, usersTable.id))
+      .innerJoin(
+        paperKeywordsTable,
+        eq(papersTable.id, paperKeywordsTable.paperId)
+      )
+      .innerJoin(
+        keywordsTable,
+        eq(keywordsTable.id, paperKeywordsTable.keywordId)
+      )
       .$dynamic();
 
     let countQuery = db
@@ -119,7 +178,7 @@ export class PapersController {
       baseQuery = baseQuery
         .innerJoin(
           categoriesTable,
-          eq(papersTable.categoryId, categoriesTable.id),
+          eq(papersTable.categoryId, categoriesTable.id)
         )
         .innerJoin(fieldsTable, eq(categoriesTable.fieldId, fieldsTable.id))
         .where(eq(fieldsTable.id, fieldId));
@@ -127,7 +186,7 @@ export class PapersController {
       countQuery = countQuery
         .innerJoin(
           categoriesTable,
-          eq(papersTable.categoryId, categoriesTable.id),
+          eq(papersTable.categoryId, categoriesTable.id)
         )
         .innerJoin(fieldsTable, eq(categoriesTable.fieldId, fieldsTable.id))
         .where(eq(fieldsTable.id, fieldId));
@@ -151,10 +210,13 @@ export class PapersController {
       )`);
     }
 
-    const [{ count: total }] = await countQuery.execute();
+    const [{ count: total }] = await countQuery
+      // .groupBy(papersTable.id, usersTable.id, usersTable.name, usersTable.email)
+      .execute();
 
     const papers = await baseQuery
       .orderBy(desc(papersTable.createdAt))
+      .groupBy(papersTable.id, usersTable.id, usersTable.name, usersTable.email)
       .offset(offset)
       .limit(size)
       .execute();
@@ -194,7 +256,6 @@ export class PapersController {
       abstract: undefined,
       userId: undefined,
       categoryId: undefined,
-      keywords: undefined,
       ipfsCid: undefined,
       ipfsUrl: undefined,
     };
@@ -226,10 +287,6 @@ export class PapersController {
       updatePayload["categoryId"] = body.categoryId;
     }
 
-    if (body.keywords) {
-      updatePayload["keywords"] = body.keywords;
-    }
-
     if (body.notes) {
       updatePayload["notes"] = body.notes;
     }
@@ -240,12 +297,13 @@ export class PapersController {
       const ipfsResponse = await ipfsService.uploadFile(
         new File([fileBlob], req.file.originalname, {
           type: req.file.mimetype,
-        }),
+        })
       );
 
       updatePayload["ipfsCid"] = ipfsResponse.cid;
-      updatePayload["ipfsUrl"] =
-        `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`;
+      updatePayload[
+        "ipfsUrl"
+      ] = `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`;
     }
 
     // Verify the paper belongs to the authenticated user before updating

@@ -12,7 +12,7 @@ import { pinata } from "./db/pinata";
 import { papersTable, usersTable } from "./db/schema";
 import { requireAuth, type AuthenticatedRequest } from "./middlewares/auth";
 import { db } from "./utils/db";
-
+import { keywordRouter } from "modules/keywords/route";
 
 interface MulterRequest extends AuthenticatedRequest {
   file?: Express.Multer.File;
@@ -63,7 +63,7 @@ app.use((req, res, next) => {
 
 app.use(papersRouter);
 app.use(fieldRouter);
-
+app.use(keywordRouter);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("DeSci API - Decentralized Science Platform");
@@ -123,7 +123,6 @@ app.get(
           id: paper.id,
           title: paper.title,
           abstract: paper.abstract,
-          keywords: paper.keywords,
           ipfsCid: paper.ipfsCid,
           ipfsUrl: paper.ipfsUrl,
           createdAt: paper.createdAt,
@@ -136,99 +135,6 @@ app.get(
       res.status(500).json({
         status: "error",
         message: "Failed to retrieve your papers",
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-);
-
-app.post(
-  "/files/upload",
-  requireAuth,
-  upload.single("pdfFile"),
-  async (req: MulterRequest, res: Response) => {
-    try {
-      // Log request details for debugging
-      console.log("Upload request received");
-      console.log("Request body:", req.body);
-      console.log("File received:", req.file ? "Yes" : "No");
-      console.log("Authenticated user:", req.user?.email);
-
-      if (!req.file) {
-        return res.status(400).json({
-          status: "error",
-          message: "No PDF file uploaded",
-        });
-      }
-
-      const { title, abstract } = req.body;
-
-      if (!title) {
-        return res.status(400).json({
-          status: "error",
-          message: "PDF title is required",
-        });
-      }
-
-      // Get file information
-      const file = req.file;
-      console.log("File details:", {
-        filename: file.originalname,
-        size: file.size,
-        mimetype: file.mimetype,
-        path: file.path,
-      });
-
-      // Upload to Pinata
-      const metadata = {
-        title,
-        abstract: abstract || "",
-        originalFilename: file.originalname,
-        contentType: file.mimetype,
-      };
-
-      // @ts-ignore
-      const pinataResponse = await pinata.upload.public.file(file);
-      console.log("Pinata response:", pinataResponse);
-
-      // Store document information in database
-      const [newDocument] = await db
-        .insert(papersTable)
-        .values({
-          title,
-          notes: "",
-          abstract: abstract || "",
-          userId: req.user!.id, // Use authenticated user's ID
-          categoryId: 1, // Default category - you may want to make this configurable
-          keywords: JSON.stringify([]),
-          ipfsCid: pinataResponse.cid || "placeholder",
-          ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${
-            pinataResponse.cid || "placeholder"
-          }`,
-        })
-        .returning();
-
-      // Return success response
-      res.status(201).json({
-        status: "success",
-        message: "PDF uploaded successfully",
-        document: {
-          id: newDocument.id,
-          title: newDocument.title,
-          abstract: newDocument.abstract,
-          // ipfsHash: newDocument.ipfsHash,
-          // ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${newDocument.ipfsHash}`,
-          // filename: newDocument.filename,
-          // filesize: newDocument.filesize,
-          // createdAt: newDocument.createdAt,
-        },
-      });
-    } catch (error) {
-      console.error("PDF upload failed:", error);
-      res.status(500).json({
-        status: "error",
-        message:
-          "Failed to upload PDF. Please check your connection and try again",
         error: error instanceof Error ? error.message : String(error),
       });
     }

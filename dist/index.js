@@ -3,21 +3,27 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const node_1 = require("better-auth/node");
+const cors_1 = __importDefault(require("cors"));
+const drizzle_orm_1 = require("drizzle-orm");
 const express_1 = __importDefault(require("express"));
-const db_1 = require("./utils/db");
-const schema_1 = require("./db/schema");
+const route_1 = require("modules/papers/route");
+const route_2 = require("modules/fields/route");
 require("multer");
 const multer_1 = __importDefault(require("multer"));
-const pinata_1 = require("./db/pinata");
-const node_1 = require("better-auth/node");
 const auth_1 = require("utils/auth");
-const route_1 = require("modules/papers/route");
+const schema_1 = require("./db/schema");
 const auth_2 = require("./middlewares/auth");
-const drizzle_orm_1 = require("drizzle-orm");
+const db_1 = require("./utils/db");
+const route_3 = require("modules/keywords/route");
 const upload = (0, multer_1.default)({ dest: "uploads/" });
 const isServerless = process.env.NETLIFY === "true" || process.env.NODE_ENV === "production";
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
+app.use((0, cors_1.default)({
+    origin: "http://localhost:3000",
+    credentials: true, // Allow cookies, Authorization headers, etc.
+}));
 // better-auth requires access to the raw request body to handle authentication requests correctly.
 // Therefore, the better-auth handler must be mounted before any middleware that parses the request body,
 // such as express.json()
@@ -41,6 +47,8 @@ app.use((req, res, next) => {
     next();
 });
 app.use(route_1.papersRouter);
+app.use(route_2.fieldRouter);
+app.use(route_3.keywordRouter);
 app.get("/", (req, res) => {
     res.send("DeSci API - Decentralized Science Platform");
 });
@@ -92,7 +100,6 @@ app.get("/papers/my", auth_2.requireAuth, async (req, res) => {
                 id: paper.id,
                 title: paper.title,
                 abstract: paper.abstract,
-                keywords: paper.keywords,
                 ipfsCid: paper.ipfsCid,
                 ipfsUrl: paper.ipfsUrl,
                 createdAt: paper.createdAt,
@@ -106,83 +113,6 @@ app.get("/papers/my", auth_2.requireAuth, async (req, res) => {
         res.status(500).json({
             status: "error",
             message: "Failed to retrieve your papers",
-            error: error instanceof Error ? error.message : String(error),
-        });
-    }
-});
-app.post("/files/upload", auth_2.requireAuth, upload.single("pdfFile"), async (req, res) => {
-    try {
-        // Log request details for debugging
-        console.log("Upload request received");
-        console.log("Request body:", req.body);
-        console.log("File received:", req.file ? "Yes" : "No");
-        console.log("Authenticated user:", req.user?.email);
-        if (!req.file) {
-            return res.status(400).json({
-                status: "error",
-                message: "No PDF file uploaded",
-            });
-        }
-        const { title, abstract } = req.body;
-        if (!title) {
-            return res.status(400).json({
-                status: "error",
-                message: "PDF title is required",
-            });
-        }
-        // Get file information
-        const file = req.file;
-        console.log("File details:", {
-            filename: file.originalname,
-            size: file.size,
-            mimetype: file.mimetype,
-            path: file.path,
-        });
-        // Upload to Pinata
-        const metadata = {
-            title,
-            abstract: abstract || "",
-            originalFilename: file.originalname,
-            contentType: file.mimetype,
-        };
-        // @ts-ignore
-        const pinataResponse = await pinata_1.pinata.upload.public.file(file);
-        console.log("Pinata response:", pinataResponse);
-        // Store document information in database
-        const [newDocument] = await db_1.db
-            .insert(schema_1.papersTable)
-            .values({
-            title,
-            notes: "",
-            abstract: abstract || "",
-            userId: req.user.id, // Use authenticated user's ID
-            categoryId: 1, // Default category - you may want to make this configurable
-            keywords: JSON.stringify([]),
-            ipfsCid: pinataResponse.cid || "placeholder",
-            ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${pinataResponse.cid || "placeholder"}`,
-        })
-            .returning();
-        // Return success response
-        res.status(201).json({
-            status: "success",
-            message: "PDF uploaded successfully",
-            document: {
-                id: newDocument.id,
-                title: newDocument.title,
-                abstract: newDocument.abstract,
-                // ipfsHash: newDocument.ipfsHash,
-                // ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${newDocument.ipfsHash}`,
-                // filename: newDocument.filename,
-                // filesize: newDocument.filesize,
-                // createdAt: newDocument.createdAt,
-            },
-        });
-    }
-    catch (error) {
-        console.error("PDF upload failed:", error);
-        res.status(500).json({
-            status: "error",
-            message: "Failed to upload PDF. Please check your connection and try again",
             error: error instanceof Error ? error.message : String(error),
         });
     }

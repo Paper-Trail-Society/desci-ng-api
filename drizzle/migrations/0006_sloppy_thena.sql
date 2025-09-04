@@ -1,0 +1,2 @@
+CREATE INDEX "keywords_name_trgm_idx" ON "keywords" USING gin ("name" gin_trgm_ops);--> statement-breakpoint
+CREATE INDEX "keywords_aliases_trgm_idx" ON "keywords" USING gin ((jsonb_path_query_array("keywords", '$[*]')::text) gin_trgm_ops);

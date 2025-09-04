@@ -43,12 +43,14 @@ export const auth = betterAuth({
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
       try {
-        await emailService.sendVerificationEmail({
-          to: user.email,
-          userName: user.name || user.email,
-          verificationUrl: url,
-        });
-        console.log(`Verification email sent to ${user.email}`);
+        if (process.env.NODE_ENV === "production") {
+          await emailService.sendVerificationEmail({
+            to: user.email,
+            userName: user.name || user.email,
+            verificationUrl: url,
+          });
+          console.log(`Verification email sent to ${user.email}`);
+        }
       } catch (error) {
         console.error(
           `Failed to send verification email to ${user.email}:`,

@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { categoriesTable, fieldsTable } from "../db/schema";
+import { categoriesTable, fieldsTable, keywordsTable } from "../db/schema";
 import { db } from "../utils/db";
 
 const seedFieldsAndCategoriesTable = async () => {
@@ -103,7 +103,7 @@ const seedFieldsAndCategoriesTable = async () => {
 
     if (categoriesToInsert.length > 0) {
       console.log(
-        `Inserting ${categoriesToInsert.length} categories for field: ${field}`,
+        `Inserting ${categoriesToInsert.length} categories for field: ${field}`
       );
       await db
         .insert(categoriesTable)
@@ -111,7 +111,7 @@ const seedFieldsAndCategoriesTable = async () => {
           categoriesToInsert.map((category) => ({
             name: category,
             fieldId: fieldDoc.id,
-          })),
+          }))
         )
         .returning()
         .execute();
@@ -122,11 +122,122 @@ const seedFieldsAndCategoriesTable = async () => {
   process.exit(0);
 };
 
-const main = async () => {
-  await seedFieldsAndCategoriesTable();
+const seedKeywords = async () => {
+  console.log("Seeding keywords table...");
+
+  const keywords = [
+    {
+      name: "Artificial Intelligence",
+      aliases: ["AI", "Machine Learning", "ML"],
+    },
+    {
+      name: "Data Science",
+      aliases: ["Data Analysis", "Data Analytics"],
+    },
+    {
+      name: "Web Development",
+      aliases: ["Web Dev", "Full Stack Development"],
+    },
+    {
+      name: "Cyber Security",
+      aliases: ["InfoSec", "Security"],
+    },
+    {
+      name: "DevOps",
+      aliases: ["Development Operations", "Continuous Integration"],
+    },
+    {
+      name: "Cloud Architecture",
+      aliases: ["Cloud Design", "Cloud Infrastructure"],
+    },
+    {
+      name: "Frontend Development",
+      aliases: ["Client-side Development", "UI Development"],
+    },
+    {
+      name: "Backend Development",
+      aliases: ["Server-side Development", "API Development"],
+    },
+    {
+      name: "Database Administration",
+      aliases: ["DBA", "Database Management"],
+    },
+    {
+      name: "Network Administration",
+      aliases: ["Network Management", "Networking"],
+    },
+    {
+      name: "Software Engineering",
+      aliases: ["Software Development", "SE"],
+    },
+    {
+      name: "Quality Assurance",
+      aliases: ["QA", "Testing"],
+    },
+    {
+      name: "Agile Development",
+      aliases: ["Agile Methodologies", "Scrum"],
+    },
+    {
+      name: "User Experience",
+      aliases: ["UX", "User Interface Design"],
+    },
+    {
+      name: "Data Engineering",
+      aliases: ["Data Architecture", "Data Warehousing"],
+    },
+    {
+      name: "Business Intelligence",
+      aliases: ["BI", "Data Visualization"],
+    },
+    {
+      name: "Machine Learning Engineering",
+      aliases: ["MLE", "Deep Learning Engineering"],
+    },
+    {
+      name: "Natural Language Processing",
+      aliases: ["NLP", "Text Analysis"],
+    },
+    {
+      name: "Computer Vision",
+      aliases: ["CV", "Image Processing"],
+    },
+    {
+      name: "Robotics",
+      aliases: ["Robotics Engineering", "Autonomous Systems"],
+    },
+  ];
+
+  for (const keyword of keywords) {
+    const existingKeyword = await db
+      .select()
+      .from(keywordsTable)
+      .where(eq(keywordsTable.name, keyword.name))
+      .execute();
+
+    if (existingKeyword[0]) {
+      console.log(`Skipping existing keyword: ${keyword.name}`);
+      continue;
+    }
+
+    console.log(`Inserting new keyword: ${keyword.name}`);
+    await db
+      .insert(keywordsTable)
+      .values({ name: keyword.name, aliases: keyword.aliases })
+      .returning()
+      .execute();
+  }
+
+  console.log("Keywords table seeding complete!");
+  process.exit(0);
 };
 
-main().catch((err) => {
-  console.error("❌ Unhandled error during database seeding:", err);
+seedKeywords().catch((err) => {
+  console.error("❌ Unhandled error during database seeding keywords:", err);
+  process.exit(1);
+});
+
+seedFieldsAndCategoriesTable().catch((err) => {
+  console.error("❌ Unhandled error during database seeding keywords:", err);
   process.exit(1);
 });
