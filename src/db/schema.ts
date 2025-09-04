@@ -85,7 +85,6 @@ export const papersTable = pgTable(
     categoryId: integer("category_id")
       .notNull()
       .references(() => categoriesTable.id),
-    keywords: jsonb("keywords").notNull(),
     ipfsCid: varchar("ipfs_cid", { length: 80 }).notNull(),
     ipfsUrl: varchar("ipfs_url", { length: 255 }).notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -99,7 +98,7 @@ export const papersTable = pgTable(
     index("category_id_idx").on(table.categoryId),
     index("user_id_idx").on(table.userId),
 
-    index("keywords_gin_idx").using("gin", table.keywords),
+    // index("keywords_gin_idx").using("gin", table.keywords),
     index("search_index").using(
       "gin",
       sql`(
@@ -109,6 +108,22 @@ export const papersTable = pgTable(
     ),
   ],
 );
+
+export const paperKeywordsTable = pgTable("paper_keywords", {
+  id: serial("id").primaryKey(),
+  paperId: integer("paper_id")
+    .notNull()
+    .references(() => papersTable.id, { onDelete: "cascade" }),
+  keywordId: integer("keyword_id")
+    .notNull()
+    .references(() => keywordsTable.id, { onDelete: "cascade" }),
+});
+
+export const keywordsTable = pgTable("keywords", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  aliases: jsonb("keywords"),
+});
 
 export const fieldsTable = pgTable("fields", {
   id: serial("id").primaryKey(),

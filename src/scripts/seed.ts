@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { categoriesTable, fieldsTable } from "../db/schema";
+import { categoriesTable, fieldsTable, keywordsTable } from "../db/schema";
 import { db } from "../utils/db";
 
 const seedFieldsAndCategoriesTable = async () => {
@@ -122,11 +122,84 @@ const seedFieldsAndCategoriesTable = async () => {
   process.exit(0);
 };
 
-const main = async () => {
-  await seedFieldsAndCategoriesTable();
-};
+const seedKeywords = async () => {
+  console.log("Seeding keywords table...");
 
-main().catch((err) => {
-  console.error("❌ Unhandled error during database seeding:", err);
+  const keywords = [
+    {
+      name: "Machine Learning",
+      aliases: ["ML", "Deep Learning", "Artificial Intelligence"],
+    },
+    {
+      name: "React",
+      aliases: ["ReactJS", "React Native"],
+    },
+    {
+      name: "TypeScript",
+      aliases: ["TS"],
+    },
+    {
+      name: "JavaScript",
+      aliases: ["JS"],
+    },
+    {
+      name: "Python",
+      aliases: ["Py"],
+    },
+    {
+      name: "SQL",
+      aliases: ["Structured Query Language"],
+    },
+    {
+      name: "Databases",
+      aliases: ["Database Management Systems", "DBMS"],
+    },
+    {
+      name: "Cloud Computing",
+      aliases: ["Cloud"],
+    },
+    {
+      name: "Containerization",
+      aliases: ["Containers"],
+    },
+    {
+      name: "Serverless",
+      aliases: ["FaaS", "Function as a Service"],
+    },
+  ];
+
+  for (const keyword of keywords) {
+    const existingKeyword = await db
+      .select()
+      .from(keywordsTable)
+      .where(eq(keywordsTable.name, keyword.name))
+      .execute();
+
+    if (existingKeyword[0]) {
+      console.log(`Skipping existing keyword: ${keyword.name}`);
+      continue;
+    }
+
+    console.log(`Inserting new keyword: ${keyword.name}`);
+    await db
+      .insert(keywordsTable)
+      .values({ name: keyword.name, aliases: keyword.aliases })
+      .returning()
+      .execute();
+  }
+
+  console.log("Keywords table seeding complete!");
+  process.exit(0);
+}
+
+
+seedKeywords().catch((err) => {
+  console.error("❌ Unhandled error during database seeding keywords:", err);
+  process.exit(1);
+});
+
+
+seedFieldsAndCategoriesTable().catch((err) => {
+  console.error("❌ Unhandled error during database seeding keywords:", err);
   process.exit(1);
 });
