@@ -43,6 +43,13 @@
       "when": 1756986355967,
       "tag": "0005_magenta_mystique",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1756993035271,
+      "tag": "0006_sloppy_thena",
+      "breakpoints": true
     }
   ]
 }

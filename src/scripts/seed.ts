@@ -103,7 +103,7 @@ const seedFieldsAndCategoriesTable = async () => {
 
     if (categoriesToInsert.length > 0) {
       console.log(
-        `Inserting ${categoriesToInsert.length} categories for field: ${field}`,
+        `Inserting ${categoriesToInsert.length} categories for field: ${field}`
       );
       await db
         .insert(categoriesTable)
@@ -111,7 +111,7 @@ const seedFieldsAndCategoriesTable = async () => {
           categoriesToInsert.map((category) => ({
             name: category,
             fieldId: fieldDoc.id,
-          })),
+          }))
         )
         .returning()
         .execute();
@@ -127,44 +127,84 @@ const seedKeywords = async () => {
 
   const keywords = [
     {
-      name: "Machine Learning",
-      aliases: ["ML", "Deep Learning", "Artificial Intelligence"],
+      name: "Artificial Intelligence",
+      aliases: ["AI", "Machine Learning", "ML"],
     },
     {
-      name: "React",
-      aliases: ["ReactJS", "React Native"],
+      name: "Data Science",
+      aliases: ["Data Analysis", "Data Analytics"],
     },
     {
-      name: "TypeScript",
-      aliases: ["TS"],
+      name: "Web Development",
+      aliases: ["Web Dev", "Full Stack Development"],
     },
     {
-      name: "JavaScript",
-      aliases: ["JS"],
+      name: "Cyber Security",
+      aliases: ["InfoSec", "Security"],
     },
     {
-      name: "Python",
-      aliases: ["Py"],
+      name: "DevOps",
+      aliases: ["Development Operations", "Continuous Integration"],
     },
     {
-      name: "SQL",
-      aliases: ["Structured Query Language"],
+      name: "Cloud Architecture",
+      aliases: ["Cloud Design", "Cloud Infrastructure"],
     },
     {
-      name: "Databases",
-      aliases: ["Database Management Systems", "DBMS"],
+      name: "Frontend Development",
+      aliases: ["Client-side Development", "UI Development"],
     },
     {
-      name: "Cloud Computing",
-      aliases: ["Cloud"],
+      name: "Backend Development",
+      aliases: ["Server-side Development", "API Development"],
     },
     {
-      name: "Containerization",
-      aliases: ["Containers"],
+      name: "Database Administration",
+      aliases: ["DBA", "Database Management"],
     },
     {
-      name: "Serverless",
-      aliases: ["FaaS", "Function as a Service"],
+      name: "Network Administration",
+      aliases: ["Network Management", "Networking"],
+    },
+    {
+      name: "Software Engineering",
+      aliases: ["Software Development", "SE"],
+    },
+    {
+      name: "Quality Assurance",
+      aliases: ["QA", "Testing"],
+    },
+    {
+      name: "Agile Development",
+      aliases: ["Agile Methodologies", "Scrum"],
+    },
+    {
+      name: "User Experience",
+      aliases: ["UX", "User Interface Design"],
+    },
+    {
+      name: "Data Engineering",
+      aliases: ["Data Architecture", "Data Warehousing"],
+    },
+    {
+      name: "Business Intelligence",
+      aliases: ["BI", "Data Visualization"],
+    },
+    {
+      name: "Machine Learning Engineering",
+      aliases: ["MLE", "Deep Learning Engineering"],
+    },
+    {
+      name: "Natural Language Processing",
+      aliases: ["NLP", "Text Analysis"],
+    },
+    {
+      name: "Computer Vision",
+      aliases: ["CV", "Image Processing"],
+    },
+    {
+      name: "Robotics",
+      aliases: ["Robotics Engineering", "Autonomous Systems"],
     },
   ];
 
@@ -190,14 +230,12 @@ const seedKeywords = async () => {
 
   console.log("Keywords table seeding complete!");
   process.exit(0);
-}
-
+};
 
 seedKeywords().catch((err) => {
   console.error("❌ Unhandled error during database seeding keywords:", err);
   process.exit(1);
 });
-
 
 seedFieldsAndCategoriesTable().catch((err) => {
   console.error("❌ Unhandled error during database seeding keywords:", err);

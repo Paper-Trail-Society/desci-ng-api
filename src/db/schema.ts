@@ -65,10 +65,10 @@ export const verificationsTable = pgTable("verification", {
   value: text("value").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").$defaultFn(
-    () => /* @__PURE__ */ new Date(),
+    () => /* @__PURE__ */ new Date()
   ),
   updatedAt: timestamp("updated_at").$defaultFn(
-    () => /* @__PURE__ */ new Date(),
+    () => /* @__PURE__ */ new Date()
   ),
 });
 
@@ -104,9 +104,9 @@ export const papersTable = pgTable(
       sql`(
         setweight(to_tsvector('english', ${table.title}), 'A') ||
         setweight(to_tsvector('english', ${table.abstract}), 'B')
-    )`,
+    )`
     ),
-  ],
+  ]
 );
 
 export const paperKeywordsTable = pgTable("paper_keywords", {
@@ -119,11 +119,27 @@ export const paperKeywordsTable = pgTable("paper_keywords", {
     .references(() => keywordsTable.id, { onDelete: "cascade" }),
 });
 
-export const keywordsTable = pgTable("keywords", {
-  id: serial("id").primaryKey(),
-  name: varchar("name").notNull(),
-  aliases: jsonb("keywords"),
-});
+export const keywordsTable = pgTable(
+  "keywords",
+  {
+    id: serial("id").primaryKey(),
+    name: varchar("name").notNull(),
+    aliases: jsonb("keywords"),
+  },
+  (table) => [
+      // Trigram index for fast fuzzy search on name (with pg_trgm extension)
+      index("keywords_name_trgm_idx").using(
+        "gin",
+        sql`${table.name} gin_trgm_ops`
+      ),
+
+      // Trigram index on aliases (JSONB text values) (with pg_trgm extension)
+      index("keywords_aliases_trgm_idx").using(
+        "gin",
+        sql`(jsonb_path_query_array(${table.aliases}, '$[*]')::text) gin_trgm_ops`
+      ),
+  ]
+);
 
 export const fieldsTable = pgTable("fields", {
   id: serial("id").primaryKey(),

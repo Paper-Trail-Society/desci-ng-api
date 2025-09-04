@@ -12,7 +12,7 @@ import { pinata } from "./db/pinata";
 import { papersTable, usersTable } from "./db/schema";
 import { requireAuth, type AuthenticatedRequest } from "./middlewares/auth";
 import { db } from "./utils/db";
-
+import { keywordRouter } from "modules/keywords/route";
 
 interface MulterRequest extends AuthenticatedRequest {
   file?: Express.Multer.File;
@@ -63,7 +63,7 @@ app.use((req, res, next) => {
 
 app.use(papersRouter);
 app.use(fieldRouter);
-
+app.use(keywordRouter);
 
 app.get("/", (req: Request, res: Response) => {
   res.send("DeSci API - Decentralized Science Platform");

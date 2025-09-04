@@ -15,6 +15,7 @@ const auth_1 = require("utils/auth");
 const schema_1 = require("./db/schema");
 const auth_2 = require("./middlewares/auth");
 const db_1 = require("./utils/db");
+const route_3 = require("modules/keywords/route");
 const upload = (0, multer_1.default)({ dest: "uploads/" });
 const isServerless = process.env.NETLIFY === "true" || process.env.NODE_ENV === "production";
 const app = (0, express_1.default)();
@@ -47,6 +48,7 @@ app.use((req, res, next) => {
 });
 app.use(route_1.papersRouter);
 app.use(route_2.fieldRouter);
+app.use(route_3.keywordRouter);
 app.get("/", (req, res) => {
     res.send("DeSci API - Decentralized Science Platform");
 });
