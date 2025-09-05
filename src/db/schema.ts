@@ -9,6 +9,7 @@ import {
   timestamp,
   boolean,
   varchar,
+  unique,
 } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
@@ -117,14 +118,16 @@ export const paperKeywordsTable = pgTable("paper_keywords", {
   keywordId: integer("keyword_id")
     .notNull()
     .references(() => keywordsTable.id, { onDelete: "cascade" }),
-});
+}, (table) => [
+    unique('paper_keywords_unique_idx').on(table.paperId, table.keywordId)
+]);
 
 export const keywordsTable = pgTable(
   "keywords",
   {
     id: serial("id").primaryKey(),
     name: varchar("name").notNull(),
-    aliases: jsonb("keywords"),
+    aliases: jsonb("aliases"),
   },
   (table) => [
       // Trigram index for fast fuzzy search on name (with pg_trgm extension)
