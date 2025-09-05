@@ -14,6 +14,7 @@ export const fetchPapersQueryParams = z.object({
     fieldId: z.preprocess((v) => Number(v), z.number()).optional(),
     categoryId: z.preprocess((v) => Number(v), z.number()).optional(),
     search: z.string().optional(),
+    userId: z.string().optional(),
     page: z.preprocess((v) => Number(v), z.number()).optional().default(1),
     size: z.preprocess((v) => Number(v), z.number()).optional().default(10)
 });

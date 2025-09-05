@@ -62,7 +62,7 @@ export class PapersController {
     //   }
 
     console.log({ ipfsResponse });
-    const userId = "CNsGvcOMM0NKqSlJ2UCLtsnNKva6EBFm"; // Use authenticated user's ID
+    const userId = req.user!.id; // Use authenticated user's ID
 
     // get the ID of all keywords matching the keyword IDs in body.keywords with an SQL IN query
     const keywordIdsInDB = await db
@@ -161,7 +161,7 @@ export class PapersController {
   }
 
   async index(req: Request, res: Response) {
-    const { categoryId, fieldId, search, page, size } =
+    const { categoryId, fieldId, userId, search, page, size } =
       fetchPapersQueryParams.parse(req.query);
 
     const offset = (page - 1) * size;
@@ -206,6 +206,11 @@ export class PapersController {
       .select({ count: drizzleCount(papersTable.id) })
       .from(papersTable)
       .$dynamic();
+
+    if (userId) {
+      baseQuery = baseQuery.where(eq(papersTable.userId, userId));
+      countQuery = countQuery.where(eq(papersTable.userId, userId));
+    }
 
     if (fieldId) {
       baseQuery = baseQuery
