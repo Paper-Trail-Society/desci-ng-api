@@ -14,6 +14,7 @@
     "rootDir": "./src",
     "noEmit": false,
     "types": ["node"],
+    "typeRoots": ["src/types"],
     "verbatimModuleSyntax": false,
     "allowSyntheticDefaultImports": true,
     "declaration": false,

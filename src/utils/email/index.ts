@@ -1,4 +1,3 @@
-import "./zeptomail.d";
 import { SendMailClient } from "zeptomail";
 
 interface EmailConfig {
