@@ -3,24 +3,13 @@ import cors from "cors";
 import { eq } from "drizzle-orm";
 import type { Request, Response } from "express";
 import express from "express";
-import { papersRouter } from "modules/papers/route";
-import { fieldRouter } from "modules/fields/route";
-import "multer";
-import multer from "multer";
-import { auth } from "utils/auth";
-import { pinata } from "./db/pinata";
+import { papersRouter } from "./modules/papers/route";
+import { fieldRouter } from "./modules/fields/route";
+import { auth } from "./utils/auth";
 import { papersTable, usersTable } from "./db/schema";
 import { requireAuth, type AuthenticatedRequest } from "./middlewares/auth";
 import { db } from "./utils/db";
-import { keywordRouter } from "modules/keywords/route";
-
-interface MulterRequest extends AuthenticatedRequest {
-  file?: Express.Multer.File;
-}
-
-const upload = multer({ dest: "uploads/" });
-const isServerless =
-  process.env.NETLIFY === "true" || process.env.NODE_ENV === "production";
+import { keywordRouter } from "./modules/keywords/route";
 
 const app = express();
 const port = process.env.PORT || 3000;

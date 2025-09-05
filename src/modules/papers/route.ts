@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { PapersController } from "./controller";
 import multer from "multer";
-import { validateRequest } from "middlewares/validate-request";
+import { validateRequest } from "../../middlewares/validate-request";
 import { uploadPaper, fetchPapersQueryParams, updatePaper } from "./schema";
 import z from "zod";
 import { requireAuth } from "../../middlewares/auth";

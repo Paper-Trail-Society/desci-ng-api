@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import type { Request, Response } from "express";
 import { fetchPapersQueryParams, updatePaper, uploadPaper } from "./schema";
-import { ipfsService } from "utils/ipfs";
-import { db } from "utils/db";
+import { ipfsService } from "../../utils/ipfs";
+import { db } from "../../utils/db";
 import {
   UpdatePaper,
   categoriesTable,
@@ -11,7 +11,7 @@ import {
   paperKeywordsTable,
   papersTable,
   usersTable,
-} from "db/schema";
+} from "../../db/schema";
 import { desc, eq, sql, count as drizzleCount, inArray } from "drizzle-orm";
 import z from "zod";
 import type { AuthenticatedRequest } from "../../middlewares/auth";
