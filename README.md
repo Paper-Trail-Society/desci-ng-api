@@ -2,11 +2,26 @@
 
 Decentralized Science Platform API built with Express and PostgreSQL.
 
+## Requirements
+- Nodejs v20+
+- Docker (https://www.docker.com)
+
 ## Quick Start
 
 ```bash
+
+# Add required environment variables
+cp .env.example .env
+
 # Install dependencies
 npm install
+
+# Start docker services
+docker compose up -d
+
+# Prepare database tables for usage 
+
+npm run prepare:dev
 
 # Development
 npm run dev
@@ -19,17 +34,7 @@ npm start
 npm run netlify:deploy
 ```
 
-## Environment Setup
-
-Create `.env` file with:
-
-```
-PORT=8080
-DATABASE_URL=postgres://user:password@localhost:5432/desci
-```
-
 ## Database
-
 PostgreSQL with Drizzle ORM:
 - Connection configured via `DATABASE_URL`
 - Schema defined in `src/db/schema`
@@ -72,6 +77,7 @@ Configured for Netlify:
 ## Scripts
 
 - `npm run dev` - Start dev server with hot reload
+- `npm run prepare:dev` - Prepares database - database generation, migration, and seeding.
 - `npm run build` - Compile TypeScript
 - `npm start` - Run production build
 - `npm run netlify:dev` - Test Netlify deployment locally
