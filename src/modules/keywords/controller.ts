@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { keywordsTable } from "db/schema";
-import { db } from "utils/db";
+import { keywordsTable } from "../../db/schema";
+import { db } from "../../utils/db";
 import { desc, sql } from "drizzle-orm";
 
 export class KeywordController {

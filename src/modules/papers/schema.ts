@@ -1,4 +1,4 @@
-import z, { size } from "zod";
+import z from "zod";
 
 export const uploadPaper = z.object({
     title: z.string(),

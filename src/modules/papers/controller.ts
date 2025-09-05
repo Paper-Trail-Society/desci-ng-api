@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import type { Request, Response } from "express";
 import { fetchPapersQueryParams, updatePaper, uploadPaper } from "./schema";
-import { ipfsService } from "utils/ipfs";
-import { db } from "utils/db";
+import { ipfsService } from "../../utils/ipfs";
+import { db } from "../../utils/db";
 import {
   UpdatePaper,
   categoriesTable,
@@ -11,7 +11,7 @@ import {
   paperKeywordsTable,
   papersTable,
   usersTable,
-} from "db/schema";
+} from "../../db/schema";
 import { desc, eq, sql, count as drizzleCount, inArray } from "drizzle-orm";
 import z from "zod";
 import type { AuthenticatedRequest } from "../../middlewares/auth";
@@ -23,7 +23,7 @@ interface MulterRequest extends AuthenticatedRequest {
 export class PapersController {
   async create(req: MulterRequest, res: Response) {
     const body = uploadPaper.parse(req.body);
-
+    console.log(req.file);
     if (!req.file) {
       return res.status(400).json({
         status: "error",
@@ -62,21 +62,7 @@ export class PapersController {
     //   }
 
     console.log({ ipfsResponse });
-    const userId = req.user!.id; // Use authenticated user's ID
-
-    // Create paper in DB
-    const [newPaper] = await db
-      .insert(papersTable)
-      .values({
-        title: body.title,
-        abstract: body.abstract,
-        categoryId: body.categoryId,
-        notes: body.notes,
-        ipfsCid: ipfsResponse.cid,
-        ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`,
-        userId,
-      })
-      .returning();
+    const userId = "CNsGvcOMM0NKqSlJ2UCLtsnNKva6EBFm"; // Use authenticated user's ID
 
     // get the ID of all keywords matching the keyword IDs in body.keywords with an SQL IN query
     const keywordIdsInDB = await db
@@ -101,30 +87,77 @@ export class PapersController {
       ...keywordIdsInDB.map(({ id }) => id),
     ];
 
-    // create keyword in newKeywords if any
     for (const keyword of body.newKeywords) {
-      const [{ id: keywordId }] = await db
-        .insert(keywordsTable)
-        .values({
-          name: keyword,
-        })
-        .returning({ id: keywordsTable.id });
+      const existingKeyword = await db
+        .select({ id: keywordsTable.id })
+        .from(keywordsTable)
+        .where(eq(keywordsTable.name, keyword.trim()))
+        .execute();
 
-      keywordIdsToMapToPaper.push(keywordId);
+      if (existingKeyword.length === 0) {
+        const [{ id: keywordId }] = await db
+          .insert(keywordsTable)
+          .values({
+            name: keyword.trim(),
+          })
+          .returning({ id: keywordsTable.id });
+        keywordIdsToMapToPaper.push(keywordId);
+      } else {
+        keywordIdsToMapToPaper.push(existingKeyword[0].id);
+      }
     }
 
-    // map keywords to the paper
-    for (const keywordId of body.keywords) {
-      await db
-        .insert(paperKeywordsTable)
+    const createdPaper = await db.transaction(async (tx) => {
+      // Create paper in DB
+      const [newPaper] = await tx
+        .insert(papersTable)
         .values({
-          paperId: newPaper.id,
-          keywordId,
+          title: body.title,
+          abstract: body.abstract,
+          categoryId: body.categoryId,
+          notes: body.notes,
+          ipfsCid: ipfsResponse.cid,
+          ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`,
+          userId,
         })
         .returning();
-    }
 
-    return res.status(201).json(newPaper);
+      const existingKeywordAttachments = [];
+
+      // map keywords to the paper
+      for (const keywordId of keywordIdsToMapToPaper) {
+        try {
+          await tx
+            .insert(paperKeywordsTable)
+            .values({
+              paperId: newPaper.id,
+              keywordId,
+            })
+            .returning();
+        } catch (error: any) {
+          // check if the error is a unique constraint error in Drizzle oRM
+          if (error.code === "23505") {
+            // PostgreSQL unique violation error code
+            console.error(
+              "Unique constraint violation: This keyword attachment already exists."
+            );
+            existingKeywordAttachments.push(keywordId);
+          }
+        }
+      }
+
+      if (existingKeywordAttachments.length > 0) {
+        return res.status(400).json({
+          status: "error",
+          message: `Keyword attachments already exist for the following keyword IDs: ${existingKeywordAttachments.join(
+            ", "
+          )}`,
+        });
+      }
+      return newPaper;
+    });
+
+    return res.status(201).json(createdPaper);
   }
 
   async index(req: Request, res: Response) {

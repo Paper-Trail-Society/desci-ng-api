@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1755207979591,
-      "tag": "0000_futuristic_gambit",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1755791920535,
-      "tag": "0001_lush_groot",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1756121763228,
-      "tag": "0002_aspiring_dragon_lord",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1756129458998,
-      "tag": "0003_thankful_songbird",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1756139796984,
-      "tag": "0004_petite_norman_osborn",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1756986355967,
-      "tag": "0005_magenta_mystique",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1756993035271,
-      "tag": "0006_sloppy_thena",
+      "when": 1757097904017,
+      "tag": "0000_cloudy_union_jack",
       "breakpoints": true
     }
   ]

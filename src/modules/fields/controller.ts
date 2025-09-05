@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
-import { db } from "utils/db";
-import { categoriesTable, fieldsTable, papersTable } from "db/schema";
-import { desc, eq, sql, count as drizzleCount } from "drizzle-orm";
+import { db } from "../../utils/db";
+import { categoriesTable, fieldsTable } from "../../db/schema";
+import { eq } from "drizzle-orm";
 import z from "zod";
 
 

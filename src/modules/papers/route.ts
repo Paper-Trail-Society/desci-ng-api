@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { PapersController } from "./controller";
 import multer from "multer";
-import { validateRequest } from "middlewares/validate-request";
+import { validateRequest } from "../../middlewares/validate-request";
 import { uploadPaper, fetchPapersQueryParams, updatePaper } from "./schema";
 import z from "zod";
 import { requireAuth } from "../../middlewares/auth";
@@ -25,8 +25,8 @@ const upload = multer({
 
 papersRouter.post(
   "/papers",
-  requireAuth,
-  upload.single("pdfFile"),
+  // requireAuth,
+  upload.single("file"),
   validateRequest("body", uploadPaper),
   async (req, res) => papersController.create(req, res),
 );
