@@ -130,11 +130,11 @@ app.get(
   }
 );
 
-if (process.env.NETLIFY !== "true" && process.env.NODE_ENV !== "production") {
+// if (process.env.NETLIFY !== "true" && process.env.NODE_ENV !== "production") {
   app.listen(port, () => {
     console.log(`DeSci API listening on port ${port}`);
   });
-}
+// }
 
 module.exports = app;
 module.exports.default = app;
