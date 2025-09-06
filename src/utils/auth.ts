@@ -15,6 +15,7 @@ export const auth = betterAuth({
       verification: schema.verificationsTable,
     },
   }),
+  trustedOrigins: ['http://localhost:3000'],
   basePath: "/auth",
   emailAndPassword: {
     enabled: true,
