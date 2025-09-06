@@ -13,7 +13,7 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "noEmit": false,
-    "types": ["node"],
+    "typeRoots": ["src/types", "node_modules/@types"],
     "verbatimModuleSyntax": false,
     "allowSyntheticDefaultImports": true,
     "declaration": false,
