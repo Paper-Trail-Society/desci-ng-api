@@ -11,8 +11,10 @@ const papersController = new PapersController();
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+
+
 const upload = multer({
-  dest: "uploads/papers",
+  dest: process.env.NETLIFY === "true" ? "/tmp/uploads/papers" : "uploads/papers",
   limits: { fileSize: MAX_FILE_SIZE },
   fileFilter: (req, file, cb) => {
     if (file.mimetype !== "application/pdf") {

@@ -7,6 +7,9 @@ const fs = require("fs");
 // Create an Express app as a fallback
 const app = express();
 
+const UPLOAD_DIR = "/tmp/uploads"; // writable
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
 // Try to load the built application
 let mainApp;
 try {
