@@ -5,4 +5,4 @@ dist
 # Local Netlify folder
 .netlify
 
-uploads/*
+/uploads
