@@ -1,6 +1,11 @@
 import * as fs from "fs";
 import type { Request, Response } from "express";
-import { fetchPapersQueryParams, updatePaper, uploadPaper } from "./schema";
+import {
+  fetchPapersQueryParams,
+  getPaperSchema,
+  updatePaper,
+  uploadPaper,
+} from "./schema";
 import { ipfsService } from "../../utils/ipfs";
 import { db } from "../../utils/db";
 import {
@@ -370,6 +375,56 @@ export class PapersController {
       .returning();
 
     return res.status(200).json(updatedPaper);
+  }
+
+  async getPaperById(req: Request, res: Response) {
+    const { id: paperId } = getPaperSchema.parse(req.params);
+
+    const [paper] = await db
+      .select({
+        id: papersTable.id,
+        title: papersTable.title,
+        abstract: papersTable.abstract,
+        notes: papersTable.notes,
+        ipfsCid: papersTable.ipfsCid,
+        ipfsUrl: papersTable.ipfsUrl,
+        userId: papersTable.userId,
+        createdAt: papersTable.createdAt,
+        updatedAt: papersTable.updatedAt,
+        categoryId: papersTable.categoryId,
+        user: {
+          id: usersTable.id,
+          name: usersTable.name,
+          email: usersTable.email,
+        },
+        keywords: sql<any>`json_agg(json_build_object(
+          'id', ${keywordsTable.id},
+          'name', ${keywordsTable.name},
+          'aliases', ${keywordsTable.aliases}
+        ))`,
+      })
+      .from(papersTable)
+      .innerJoin(usersTable, eq(papersTable.userId, usersTable.id))
+      .innerJoin(
+        paperKeywordsTable,
+        eq(papersTable.id, paperKeywordsTable.paperId)
+      )
+      .innerJoin(
+        keywordsTable,
+        eq(keywordsTable.id, paperKeywordsTable.keywordId)
+      )
+      .where(eq(papersTable.id, paperId))
+      .groupBy(papersTable.id, usersTable.id, usersTable.name, usersTable.email)
+      .limit(1)
+      .execute();
+
+    if (!paper) {
+      return res.status(404).json({
+        error: "Paper not found",
+      });
+    }
+
+    return res.status(200).json(paper);
   }
 
   async delete(req: Request, res: Response) {

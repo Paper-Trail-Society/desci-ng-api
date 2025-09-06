@@ -2,7 +2,7 @@ import { Router } from "express";
 import { PapersController } from "./controller";
 import multer from "multer";
 import { validateRequest } from "../../middlewares/validate-request";
-import { uploadPaper, fetchPapersQueryParams, updatePaper } from "./schema";
+import { uploadPaper, fetchPapersQueryParams, updatePaper, getPaperSchema } from "./schema";
 import z from "zod";
 import { requireAuth } from "../../middlewares/auth";
 
@@ -35,6 +35,12 @@ papersRouter.get(
   "/papers",
   validateRequest("query", fetchPapersQueryParams),
   async (req, res) => papersController.index(req, res),
+);
+
+papersRouter.get(
+  "/papers/:id",
+  validateRequest("params", getPaperSchema),
+  async (req, res) => papersController.getPaperById(req, res),
 );
 
 papersRouter.put(
