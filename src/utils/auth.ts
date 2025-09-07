@@ -19,6 +19,18 @@ export const auth = betterAuth({
     .split(",")
     .filter(Boolean),
   basePath: "/auth",
+  user: {
+    additionalFields: {
+      institutionId: {
+        type: "number",
+        required: false,
+      },
+      areasOfInterest: {
+        type: "string", // We'll store as JSON string for now
+        required: false,
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,

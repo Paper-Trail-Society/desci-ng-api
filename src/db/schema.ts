@@ -24,7 +24,7 @@ export const usersTable = pgTable("users", {
   institutionId: integer("institution_id").references(
     () => institutionsTable.id
   ),
-  areasOfInterest: jsonb("areas_of_interest").$type<number[]>(),
+  areasOfInterest: text("areas_of_interest"),
   createdAt: timestamp("created_at")
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),

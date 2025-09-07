@@ -54,7 +54,7 @@ app.use(papersRouter);
 app.use(fieldRouter);
 app.use(keywordRouter);
 
-app.get("/", (req: Request, res: Response) => {
+app.get("/", (_req: Request, res: Response) => {
   res.send("DeSci API - Decentralized Science Platform");
 });
 
@@ -130,40 +130,8 @@ app.get(
   }
 );
 
-// Update user profile with institution and areas of interest
-app.put(
-  "/profile",
-  requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { institutionId, areasOfInterest } = req.body;
-      const userId = req.user!.id;
-
-      await db
-        .update(usersTable)
-        .set({
-          institutionId: institutionId || null,
-          areasOfInterest: areasOfInterest || [],
-          updatedAt: new Date(),
-        })
-        .where(eq(usersTable.id, userId));
-
-      res.json({
-        status: "success",
-        message: "Profile updated successfully",
-      });
-    } catch (error) {
-      console.error("Profile update error:", error);
-      res.status(500).json({
-        status: "error",
-        message: "Failed to update profile",
-      });
-    }
-  }
-);
-
 // Get all institutions
-app.get("/institutions", async (req: Request, res: Response) => {
+app.get("/institutions", async (_req: Request, res: Response) => {
   try {
     const institutions = await db
       .select({
