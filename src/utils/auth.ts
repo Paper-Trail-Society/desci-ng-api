@@ -15,10 +15,22 @@ export const auth = betterAuth({
       verification: schema.verificationsTable,
     },
   }),
-  trustedOrigins: (process.env.BETTER_AUTH_TRUSTED_ORIGINS || '')
-    .split(',')
+  trustedOrigins: (process.env.BETTER_AUTH_TRUSTED_ORIGINS || "")
+    .split(",")
     .filter(Boolean),
   basePath: "/auth",
+  user: {
+    additionalFields: {
+      institutionId: {
+        type: "number",
+        required: false,
+      },
+      areasOfInterest: {
+        type: "string", // We'll store as JSON string for now
+        required: false,
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,

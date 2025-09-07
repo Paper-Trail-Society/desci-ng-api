@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -7,9 +8,8 @@ import {
   serial,
   text,
   timestamp,
-  boolean,
-  varchar,
   unique,
+  varchar,
 } from "drizzle-orm/pg-core";
 
 export const usersTable = pgTable("users", {
@@ -21,6 +21,10 @@ export const usersTable = pgTable("users", {
     .$defaultFn(() => false)
     .notNull(),
   image: text("image"),
+  institutionId: integer("institution_id").references(
+    () => institutionsTable.id
+  ),
+  areasOfInterest: text("areas_of_interest"),
   createdAt: timestamp("created_at")
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
@@ -110,17 +114,21 @@ export const papersTable = pgTable(
   ]
 );
 
-export const paperKeywordsTable = pgTable("paper_keywords", {
-  id: serial("id").primaryKey(),
-  paperId: integer("paper_id")
-    .notNull()
-    .references(() => papersTable.id, { onDelete: "cascade" }),
-  keywordId: integer("keyword_id")
-    .notNull()
-    .references(() => keywordsTable.id, { onDelete: "cascade" }),
-}, (table) => [
-    unique('paper_keywords_unique_idx').on(table.paperId, table.keywordId)
-]);
+export const paperKeywordsTable = pgTable(
+  "paper_keywords",
+  {
+    id: serial("id").primaryKey(),
+    paperId: integer("paper_id")
+      .notNull()
+      .references(() => papersTable.id, { onDelete: "cascade" }),
+    keywordId: integer("keyword_id")
+      .notNull()
+      .references(() => keywordsTable.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    unique("paper_keywords_unique_idx").on(table.paperId, table.keywordId),
+  ]
+);
 
 export const keywordsTable = pgTable(
   "keywords",
@@ -130,17 +138,17 @@ export const keywordsTable = pgTable(
     aliases: jsonb("aliases"),
   },
   (table) => [
-      // Trigram index for fast fuzzy search on name (with pg_trgm extension)
-      index("keywords_name_trgm_idx").using(
-        "gin",
-        sql`${table.name} gin_trgm_ops`
-      ),
+    // Trigram index for fast fuzzy search on name (with pg_trgm extension)
+    index("keywords_name_trgm_idx").using(
+      "gin",
+      sql`${table.name} gin_trgm_ops`
+    ),
 
-      // Trigram index on aliases (JSONB text values) (with pg_trgm extension)
-      index("keywords_aliases_trgm_idx").using(
-        "gin",
-        sql`(jsonb_path_query_array(${table.aliases}, '$[*]')::text) gin_trgm_ops`
-      ),
+    // Trigram index on aliases (JSONB text values) (with pg_trgm extension)
+    index("keywords_aliases_trgm_idx").using(
+      "gin",
+      sql`(jsonb_path_query_array(${table.aliases}, '$[*]')::text) gin_trgm_ops`
+    ),
   ]
 );
 
@@ -161,9 +169,23 @@ export const categoriesTable = pgTable("categories", {
     .references(() => fieldsTable.id, { onDelete: "cascade" }),
 });
 
+export const institutionsTable = pgTable("institutions", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull().unique(),
+  createdAt: timestamp("created_at")
+    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .notNull(),
+  updatedAt: timestamp("updated_at")
+    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
 export type InsertUser = typeof usersTable.$inferInsert;
 export type SelectUser = typeof usersTable.$inferSelect;
 
 export type InsertPaper = typeof papersTable.$inferInsert;
 export type UpdatePaper = Omit<InsertPaper, "id" | "createdAt" | "updatedAt">;
 export type SelectPaper = typeof papersTable.$inferSelect;
+
+export type InsertInstitution = typeof institutionsTable.$inferInsert;
+export type SelectInstitution = typeof institutionsTable.$inferSelect;

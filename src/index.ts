@@ -3,13 +3,13 @@ import cors from "cors";
 import { eq } from "drizzle-orm";
 import type { Request, Response } from "express";
 import express from "express";
-import { papersRouter } from "./modules/papers/route";
-import { fieldRouter } from "./modules/fields/route";
-import { auth } from "./utils/auth";
-import { papersTable, usersTable } from "./db/schema";
+import { institutionsTable, papersTable, usersTable } from "./db/schema";
 import { requireAuth, type AuthenticatedRequest } from "./middlewares/auth";
-import { db } from "./utils/db";
+import { fieldRouter } from "./modules/fields/route";
 import { keywordRouter } from "./modules/keywords/route";
+import { papersRouter } from "./modules/papers/route";
+import { auth } from "./utils/auth";
+import { db } from "./utils/db";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -54,7 +54,7 @@ app.use(papersRouter);
 app.use(fieldRouter);
 app.use(keywordRouter);
 
-app.get("/", (req: Request, res: Response) => {
+app.get("/", (_req: Request, res: Response) => {
   res.send("DeSci API - Decentralized Science Platform");
 });
 
@@ -130,10 +130,34 @@ app.get(
   }
 );
 
+// Get all institutions
+app.get("/institutions", async (_req: Request, res: Response) => {
+  try {
+    const institutions = await db
+      .select({
+        id: institutionsTable.id,
+        name: institutionsTable.name,
+      })
+      .from(institutionsTable)
+      .orderBy(institutionsTable.name);
+
+    res.json({
+      status: "success",
+      institutions,
+    });
+  } catch (error) {
+    console.error("Get institutions error:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Failed to fetch institutions",
+    });
+  }
+});
+
 // if (process.env.NETLIFY !== "true" && process.env.NODE_ENV !== "production") {
-  app.listen(port, () => {
-    console.log(`DeSci API listening on port ${port}`);
-  });
+app.listen(port, () => {
+  console.log(`DeSci API listening on port ${port}`);
+});
 // }
 
 module.exports = app;
