@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { openAPI } from "better-auth/plugins";
+import { bearer, jwt, openAPI } from "better-auth/plugins";
 import * as schema from "../db/schema";
 import { db } from "./db";
 import { emailService } from "./email";
@@ -13,6 +13,7 @@ export const auth = betterAuth({
       session: schema.sessionsTable,
       account: schema.accountsTable,
       verification: schema.verificationsTable,
+      jwks: schema.jwksTable,
     },
   }),
   trustedOrigins: (process.env.BETTER_AUTH_TRUSTED_ORIGINS || "")
@@ -65,6 +66,8 @@ export const auth = betterAuth({
             verificationUrl: url,
           });
           console.log(`Verification email sent to ${user.email}`);
+        } else {
+          console.log(`Verification URL for ${user.email}: ${url}`);
         }
       } catch (error) {
         console.error(
@@ -75,5 +78,5 @@ export const auth = betterAuth({
       }
     },
   },
-  plugins: [openAPI()],
+  plugins: [openAPI(), jwt(), bearer()],
 });

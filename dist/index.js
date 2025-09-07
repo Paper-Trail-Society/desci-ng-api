@@ -18,7 +18,15 @@ const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
 app.use((0, cors_1.default)({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    credentials: true, // Allow cookies, Authorization headers, etc.
+    credentials: true, // Allow cookies and Authorization headers
+    allowedHeaders: [
+        "Origin",
+        "X-Requested-With",
+        "Content-Type",
+        "Accept",
+        "Authorization",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
 }));
 // better-auth requires access to the raw request body to handle authentication requests correctly.
 // Therefore, the better-auth handler must be mounted before any middleware that parses the request body,
@@ -30,18 +38,29 @@ app.get("/auth/me", async (req, res) => {
     });
     return res.json(session);
 });
+// JWT token endpoint - get a JWT token for authenticated users
+app.get("/auth/jwt-token", async (req, res) => {
+    const session = await auth_2.auth.api.getSession({
+        headers: (0, node_1.fromNodeHeaders)(req.headers),
+    });
+    if (!session) {
+        return res.status(401).json({
+            status: "error",
+            message: "Authentication required to get JWT token",
+        });
+    }
+    // The JWT token will be automatically included in the response headers
+    // when using the JWT plugin
+    return res.json({
+        status: "success",
+        message: "JWT token generated successfully",
+        user: session.user,
+    });
+});
 // Increase the payload size limit for JSON and URL-encoded bodies
 app.use(express_1.default.json({ limit: "100mb" }));
 app.use(express_1.default.urlencoded({ extended: true, limit: "100mb" }));
-app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-    if (req.method === "OPTIONS") {
-        res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH");
-        return res.status(200).json({});
-    }
-    next();
-});
+// CORS is now handled by the cors middleware above
 app.use(route_3.papersRouter);
 app.use(route_1.fieldRouter);
 app.use(route_2.keywordRouter);
