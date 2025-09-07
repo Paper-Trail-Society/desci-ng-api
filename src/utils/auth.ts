@@ -66,6 +66,8 @@ export const auth = betterAuth({
             verificationUrl: url,
           });
           console.log(`Verification email sent to ${user.email}`);
+        } else {
+          console.log(`Verification URL for ${user.email}: ${url}`);
         }
       } catch (error) {
         console.error(
