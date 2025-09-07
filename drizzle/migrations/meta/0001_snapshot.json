@@ -1,5 +1,5 @@
 {
-  "id": "66e6ec5b-25f0-4076-9b1e-a65f3cf28082",
+  "id": "1c8e3b15-6e79-40ca-9569-91ef3b377b3e",
   "prevId": "ba4b067d-b3d4-457c-be65-30ede65eec7b",
   "version": "7",
   "dialect": "postgresql",
@@ -685,7 +685,7 @@
         },
         "areas_of_interest": {
           "name": "areas_of_interest",
-          "type": "jsonb",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
