@@ -122,7 +122,7 @@ export class PapersController {
           categoryId: body.categoryId,
           notes: body.notes,
           ipfsCid: ipfsResponse.cid,
-          ipfsUrl: `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`,
+          ipfsUrl: `https://${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`,
           userId,
         })
         .returning();

@@ -45,7 +45,7 @@ app.use((req, res, next) => {
 app.use(route_3.papersRouter);
 app.use(route_1.fieldRouter);
 app.use(route_2.keywordRouter);
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
     res.send("DeSci API - Decentralized Science Platform");
 });
 // Health check endpoint
@@ -113,34 +113,8 @@ app.get("/papers/my", auth_1.requireAuth, async (req, res) => {
         });
     }
 });
-// Update user profile with institution and areas of interest
-app.put("/profile", auth_1.requireAuth, async (req, res) => {
-    try {
-        const { institutionId, areasOfInterest } = req.body;
-        const userId = req.user.id;
-        await db_1.db
-            .update(schema_1.usersTable)
-            .set({
-            institutionId: institutionId || null,
-            areasOfInterest: areasOfInterest || [],
-            updatedAt: new Date(),
-        })
-            .where((0, drizzle_orm_1.eq)(schema_1.usersTable.id, userId));
-        res.json({
-            status: "success",
-            message: "Profile updated successfully",
-        });
-    }
-    catch (error) {
-        console.error("Profile update error:", error);
-        res.status(500).json({
-            status: "error",
-            message: "Failed to update profile",
-        });
-    }
-});
 // Get all institutions
-app.get("/institutions", async (req, res) => {
+app.get("/institutions", async (_req, res) => {
     try {
         const institutions = await db_1.db
             .select({
