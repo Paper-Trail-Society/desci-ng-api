@@ -1,5 +1,10 @@
 import { eq } from "drizzle-orm";
-import { categoriesTable, fieldsTable, keywordsTable } from "../db/schema";
+import {
+  categoriesTable,
+  fieldsTable,
+  institutionsTable,
+  keywordsTable,
+} from "../db/schema";
 import { db } from "../utils/db";
 
 const seedFieldsAndCategoriesTable = async () => {
@@ -232,6 +237,160 @@ const seedKeywords = async () => {
   process.exit(0);
 };
 
+const seedInstitutions = async () => {
+  console.log("Seeding institutions table...");
+
+  const nigerianUniversities = [
+    "University of Ibadan",
+    "University of Nigeria, Nsukka",
+    "Ahmadu Bello University",
+    "University of Lagos",
+    "Obafemi Awolowo University",
+    "University of Benin",
+    "University of Ilorin",
+    "University of Jos",
+    "University of Calabar",
+    "University of Port Harcourt",
+    "Bayero University Kano",
+    "University of Maiduguri",
+    "University of Abuja",
+    "Federal University of Technology, Akure",
+    "Federal University of Technology, Owerri",
+    "Federal University of Technology, Minna",
+    "Lagos State University",
+    "Rivers State University",
+    "Ekiti State University",
+    "Osun State University",
+    "Kogi State University",
+    "Nasarawa State University",
+    "Plateau State University",
+    "Cross River State University of Technology",
+    "Abia State University",
+    "Enugu State University of Science and Technology",
+    "Imo State University",
+    "Delta State University",
+    "Ambrose Alli University",
+    "Niger Delta University",
+    "Covenant University",
+    "Babcock University",
+    "Redeemer's University",
+    "Bowen University",
+    "Landmark University",
+    "Afe Babalola University",
+    "American University of Nigeria",
+    "Nile University of Nigeria",
+    "Pan-Atlantic University",
+    "Adeleke University",
+    "Bells University of Technology",
+    "Caleb University",
+    "Crawford University",
+    "Elizade University",
+    "Fountain University",
+    "Igbinedion University",
+    "Joseph Ayo Babalola University",
+    "Lead City University",
+    "Madonna University",
+    "Novena University",
+    "Oduduwa University",
+    "Renaissance University",
+    "Salem University",
+    "Veritas University",
+    "Wesley University",
+    "Achievers University",
+    "Al-Hikmah University",
+    "Al-Qalam University",
+    "Atiba University",
+    "Augustine University",
+    "Baze University",
+    "Bingham University",
+    "Caritas University",
+    "Chrisland University",
+    "Christopher University",
+    "Coal City University",
+    "Crescent University",
+    "Edwin Clark University",
+    "Evangel University",
+    "Federal University Gashua",
+    "Federal University Lafia",
+    "Federal University Lokoja",
+    "Federal University Otuoke",
+    "Federal University Oye-Ekiti",
+    "Federal University Wukari",
+    "Federal University Birnin Kebbi",
+    "Federal University Dutse",
+    "Federal University Dutsin-Ma",
+    "Federal University Gusau",
+    "Federal University Kashere",
+    "Federal University Ndufu-Alike",
+    "Godfrey Okoye University",
+    "Hallmark University",
+    "Hezekiah University",
+    "Kings University",
+    "Kwararafa University",
+    "McPherson University",
+    "Michael Okpara University of Agriculture",
+    "Mountain Top University",
+    "Nigerian Defence Academy",
+    "Paul University",
+    "Rhema University",
+    "Ritman University",
+    "Samuel Adegboyega University",
+    "Southwestern University",
+    "Summit University",
+    "Tansian University",
+    "University of Mkar",
+    "Wellspring University",
+    "Western Delta University",
+    "Admiralty University of Nigeria",
+    "Arthur Jarvis University",
+    "Clifford University",
+    "Dominican University",
+    "Federal University of Agriculture, Abeokuta",
+    "Federal University of Petroleum Resources",
+    "Federal University of Agriculture, Makurdi",
+    "Federal University Alex Ekwueme",
+    "Gregory University",
+    "Greenfield University",
+    "Katsina University",
+    "Legacy University",
+    "Micheal and Cecilia Ibru University",
+    "Nigerian Army University",
+    "Nigerian Maritime University",
+    "Nigerian Police Academy",
+    "Northwest University",
+    "Precious Cornerstone University",
+    "Prince Abubakar Audu University",
+    "Skyline University",
+    "Thomas Adewumi University",
+    "Trinity University",
+    "University of Africa",
+    "Westland University",
+  ];
+
+  for (const university of nigerianUniversities) {
+    const existingInstitution = await db
+      .select()
+      .from(institutionsTable)
+      .where(eq(institutionsTable.name, university))
+      .execute();
+
+    if (existingInstitution[0]) {
+      console.log(`Skipping existing institution: ${university}`);
+      continue;
+    }
+
+    console.log(`Inserting new institution: ${university}`);
+    await db
+      .insert(institutionsTable)
+      .values({ name: university })
+      .returning()
+      .execute();
+  }
+
+  console.log("Institutions table seeding complete!");
+  process.exit(0);
+};
+
 seedKeywords().catch((err) => {
   console.error("❌ Unhandled error during database seeding keywords:", err);
   process.exit(1);
@@ -239,5 +398,13 @@ seedKeywords().catch((err) => {
 
 seedFieldsAndCategoriesTable().catch((err) => {
   console.error("❌ Unhandled error during database seeding keywords:", err);
+  process.exit(1);
+});
+
+seedInstitutions().catch((err) => {
+  console.error(
+    "❌ Unhandled error during database seeding institutions:",
+    err
+  );
   process.exit(1);
 });
