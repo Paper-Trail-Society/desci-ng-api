@@ -17,7 +17,15 @@ const port = process.env.PORT || 3000;
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    credentials: true, // Allow cookies, Authorization headers, etc.
+    credentials: true, // Allow cookies and Authorization headers
+    allowedHeaders: [
+      "Origin",
+      "X-Requested-With",
+      "Content-Type",
+      "Accept",
+      "Authorization",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   })
 );
 
@@ -33,22 +41,31 @@ app.get("/auth/me", async (req, res) => {
   return res.json(session);
 });
 
+// JWT token endpoint - get a JWT token for authenticated users
+app.get("/auth/jwt-token", async (req, res) => {
+  const session = await auth.api.getSession({
+    headers: fromNodeHeaders(req.headers),
+  });
+
+  if (!session) {
+    return res.status(401).json({
+      status: "error",
+      message: "Authentication required to get JWT token",
+    });
+  }
+
+  // The JWT token will be automatically included in the response headers
+  // when using the JWT plugin
+  return res.json({
+    status: "success",
+    message: "JWT token generated successfully",
+    user: session.user,
+  });
+});
+
 // Increase the payload size limit for JSON and URL-encoded bodies
 app.use(express.json({ limit: "100mb" }));
 app.use(express.urlencoded({ extended: true, limit: "100mb" }));
-
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-  );
-  if (req.method === "OPTIONS") {
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH");
-    return res.status(200).json({});
-  }
-  next();
-});
 
 app.use(papersRouter);
 app.use(fieldRouter);
