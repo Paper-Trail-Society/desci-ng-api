@@ -28,7 +28,6 @@ interface MulterRequest extends AuthenticatedRequest {
 export class PapersController {
   async create(req: MulterRequest, res: Response) {
     const body = uploadPaper.parse(req.body);
-    console.log(req.file);
     if (!req.file) {
       return res.status(400).json({
         status: "error",

@@ -41,6 +41,7 @@ app.get("/auth/me", async (req, res) => {
   return res.json(session);
 });
 
+
 // JWT token endpoint - get a JWT token for authenticated users
 app.get("/auth/jwt-token", async (req, res) => {
   const session = await auth.api.getSession({
