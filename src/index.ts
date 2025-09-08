@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import cors from "cors";
 import { eq } from "drizzle-orm";
@@ -47,7 +48,6 @@ app.get("/user/me", async (req, res) => {
   }
   return res.json(session);
 });
-
 
 // JWT token endpoint - get a JWT token for authenticated users
 app.get("/user/jwt-token", async (req, res) => {

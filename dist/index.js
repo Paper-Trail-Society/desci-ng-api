@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv/config");
 const node_1 = require("better-auth/node");
 const cors_1 = __importDefault(require("cors"));
 const drizzle_orm_1 = require("drizzle-orm");
@@ -32,14 +33,20 @@ app.use((0, cors_1.default)({
 // Therefore, the better-auth handler must be mounted before any middleware that parses the request body,
 // such as express.json()
 app.all("/auth/{*any}", (0, node_1.toNodeHandler)(auth_2.auth));
-app.get("/auth/me", async (req, res) => {
+app.get("/user/me", async (req, res) => {
     const session = await auth_2.auth.api.getSession({
         headers: (0, node_1.fromNodeHeaders)(req.headers),
     });
+    if (!session) {
+        return res.status(401).json({
+            status: "error",
+            message: "Authentication required to get user details",
+        });
+    }
     return res.json(session);
 });
 // JWT token endpoint - get a JWT token for authenticated users
-app.get("/auth/jwt-token", async (req, res) => {
+app.get("/user/jwt-token", async (req, res) => {
     const session = await auth_2.auth.api.getSession({
         headers: (0, node_1.fromNodeHeaders)(req.headers),
     });
