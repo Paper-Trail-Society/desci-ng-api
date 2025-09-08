@@ -45,12 +45,6 @@ export class PapersController {
       path: file.path,
     });
 
-    const fileBlob = new Blob([fs.readFileSync(req.file.path)]);
-
-    const ipfsResponse = await ipfsService.uploadFile(
-      new File([fileBlob], file.originalname, { type: file.mimetype })
-    );
-
     // {
     //     ipfsResponse: {
     //       id: '0198c2b9-41cc-7743-aa32-63e44fb60ddc',
@@ -66,7 +60,7 @@ export class PapersController {
     //     }
     //   }
 
-    console.log({ ipfsResponse });
+    console.log({ user: req.user });
     const userId = req.user!.id; // Use authenticated user's ID
 
     // get the ID of all keywords matching the keyword IDs in body.keywords with an SQL IN query
@@ -111,6 +105,12 @@ export class PapersController {
         keywordIdsToMapToPaper.push(existingKeyword[0].id);
       }
     }
+
+    const fileBlob = new Blob([fs.readFileSync(file.path)]);
+
+    const ipfsResponse = await ipfsService.uploadFile(
+      new File([fileBlob], file.originalname, { type: file.mimetype })
+    );
 
     const createdPaper = await db.transaction(async (tx) => {
       // Create paper in DB

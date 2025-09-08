@@ -60,7 +60,6 @@ app.get("/auth/jwt-token", async (req, res) => {
 // Increase the payload size limit for JSON and URL-encoded bodies
 app.use(express_1.default.json({ limit: "100mb" }));
 app.use(express_1.default.urlencoded({ extended: true, limit: "100mb" }));
-// CORS is now handled by the cors middleware above
 app.use(route_3.papersRouter);
 app.use(route_1.fieldRouter);
 app.use(route_2.keywordRouter);
