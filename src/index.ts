@@ -34,16 +34,23 @@ app.use(
 // such as express.json()
 app.all("/auth/{*any}", toNodeHandler(auth));
 
-app.get("/auth/me", async (req, res) => {
+app.get("/user/me", async (req, res) => {
   const session = await auth.api.getSession({
     headers: fromNodeHeaders(req.headers),
   });
+
+  if (!session) {
+    return res.status(401).json({
+      status: "error",
+      message: "Authentication required to get user details",
+    });
+  }
   return res.json(session);
 });
 
 
 // JWT token endpoint - get a JWT token for authenticated users
-app.get("/auth/jwt-token", async (req, res) => {
+app.get("/user/jwt-token", async (req, res) => {
   const session = await auth.api.getSession({
     headers: fromNodeHeaders(req.headers),
   });
