@@ -81,3 +81,4 @@ export const auth = betterAuth({
   },
   plugins: [openAPI(), jwt(), bearer()],
 });
+
