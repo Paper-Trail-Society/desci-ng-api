@@ -16,6 +16,13 @@ type CsvObjectType = {
   github_url: string;
 };
 
+/**
+ * Strip leading/trailing escape characters (\n, \t, \r) from a string.
+ */
+function stripEscapes(input: string): string {
+  return input.replace(/^[\n\r\t]+|[\n\r\t]+$/g, "");
+}
+
 const generateRandomPassword = () => {
   const characters =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -33,21 +40,21 @@ const indexPaper = async (row: CsvObjectType) => {
     .select()
     .from(categoriesTable)
     .where(
-      eq(categoriesTable.name, row.category.trim().replace(/[^\w\s]/gi, "")) // remove leading or trailing escape characters
+      eq(categoriesTable.name, stripEscapes(row.category.trim())) // remove leading or trailing escape characters
     );
 
-  console.log({ category, categoryName: row.category.trim().replace(/[^\w\s]/gi, "") });
+  console.log({ category, categoryName: stripEscapes(row.category.trim()) });
 
   // ensure institution exists
   let [institution] = await db
     .select()
     .from(institutionsTable)
-    .where(eq(institutionsTable.name, row.category.trim().replace(/[^\w\s]/gi, "")));
+    .where(eq(institutionsTable.name, stripEscapes(row.institution.trim())));
 
   if (!institution) {
     [institution] = await db
       .insert(institutionsTable)
-      .values({ name: row.institution.trim().replace(/[^\w\s]/gi, "") })
+      .values({ name: stripEscapes(row.institution.trim()) })
       .returning();
   }
   console.log({ institution });
@@ -158,4 +165,5 @@ async function parseCsvAndInsert(filePath: string) {
 (async () => {
   await parseCsvAndInsert("./desci-ng-fields-categories-authors.csv");
   console.log("🎉 Import complete");
+  process.exit(0);
 })();

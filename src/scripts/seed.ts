@@ -45,11 +45,14 @@ const seedFieldsAndCategoriesTable = async () => {
     Agriculture: [
       "Animal Production",
       "Agronomy",
-      "Home Economics & Food Science",
+      "Home Economics",
+      "Food Science",
       "Aquaculture & Fisheries",
     ],
     "Pure and Applied Sciences": [
       "Pure and Applied Biology",
+      "Biology",
+      "Agriculture",
       "Biochemistry",
       "Microbiology",
       "Astronomy",
@@ -128,7 +131,6 @@ const seedFieldsAndCategoriesTable = async () => {
   }
 
   console.log("Fields and categories tables seeding complete!");
-  process.exit(0);
 };
 
 const seedKeywords = async () => {
@@ -238,7 +240,6 @@ const seedKeywords = async () => {
   }
 
   console.log("Keywords table seeding complete!");
-  process.exit(0);
 };
 
 const seedInstitutions = async () => {
@@ -392,13 +393,13 @@ const seedInstitutions = async () => {
   }
 
   console.log("Institutions table seeding complete!");
-  process.exit(0);
 };
 
-
 (async () => {
-  await seedFieldsAndCategoriesTable();
   await seedKeywords();
+  await seedFieldsAndCategoriesTable();
   await seedInstitutions();
-})();
 
+  console.log('Database seeding complete!')
+  process.exit(0);
+})();
