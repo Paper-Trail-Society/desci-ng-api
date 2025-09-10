@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { eq } from "drizzle-orm";
 import {
   categoriesTable,
@@ -26,7 +27,8 @@ const seedFieldsAndCategoriesTable = async () => {
       "Pathology",
     ],
     "Clinical Sciences": [
-      "Medicine",
+      "Obstetrics & Gynecology",
+      "Medicine & Surgery",
       "Surgery",
       "Radiology",
       "Behavioural Science",
@@ -39,23 +41,28 @@ const seedFieldsAndCategoriesTable = async () => {
       "Science Education",
     ],
     "Management Sciences": ["Accounting"],
-    Arts: ["English", "Performing Arts"],
+    "Arts and Humanities": ["English Language", "Performing Arts"],
     Agriculture: [
       "Animal Production",
       "Agronomy",
-      "Home Economics & Food Science",
+      "Home Economics",
+      "Food Science",
       "Aquaculture & Fisheries",
     ],
     "Pure and Applied Sciences": [
       "Pure and Applied Biology",
+      "Biology",
+      "Agriculture",
       "Biochemistry",
       "Microbiology",
+      "Astronomy",
     ],
     "Physical Sciences": ["Industrial Chemistry", "Chemistry"],
     "Computing, Communication & Information": [
       "Computer Science",
       "Mass Communication",
       "Library & Information Science",
+      "Blockchain Technology",
     ],
     Law: [
       "Business Law",
@@ -81,9 +88,6 @@ const seedFieldsAndCategoriesTable = async () => {
           .insert(fieldsTable)
           .values({
             name: field,
-            title: field,
-            abstract: `Research field focused on ${field}`,
-            content: `This field encompasses research and studies related to ${field}`,
           })
           .returning()
           .execute()
@@ -110,6 +114,9 @@ const seedFieldsAndCategoriesTable = async () => {
       console.log(
         `Inserting ${categoriesToInsert.length} categories for field: ${field}`
       );
+
+      console.log(`Categories to insert for ${field}:`, categories);
+
       await db
         .insert(categoriesTable)
         .values(
@@ -124,7 +131,6 @@ const seedFieldsAndCategoriesTable = async () => {
   }
 
   console.log("Fields and categories tables seeding complete!");
-  process.exit(0);
 };
 
 const seedKeywords = async () => {
@@ -234,7 +240,6 @@ const seedKeywords = async () => {
   }
 
   console.log("Keywords table seeding complete!");
-  process.exit(0);
 };
 
 const seedInstitutions = async () => {
@@ -388,23 +393,13 @@ const seedInstitutions = async () => {
   }
 
   console.log("Institutions table seeding complete!");
-  process.exit(0);
 };
 
-seedKeywords().catch((err) => {
-  console.error("❌ Unhandled error during database seeding keywords:", err);
-  process.exit(1);
-});
+(async () => {
+  await seedKeywords();
+  await seedFieldsAndCategoriesTable();
+  await seedInstitutions();
 
-seedFieldsAndCategoriesTable().catch((err) => {
-  console.error("❌ Unhandled error during database seeding keywords:", err);
-  process.exit(1);
-});
-
-seedInstitutions().catch((err) => {
-  console.error(
-    "❌ Unhandled error during database seeding institutions:",
-    err
-  );
-  process.exit(1);
-});
+  console.log('Database seeding complete!')
+  process.exit(0);
+})();

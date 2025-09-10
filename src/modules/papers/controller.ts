@@ -188,19 +188,19 @@ export class PapersController {
           name: usersTable.name,
           email: usersTable.email,
         },
-        keywords: sql<any>`json_agg(json_build_object(
+        keywords: sql<any>`COALESCE(json_agg(json_build_object(
           'id', ${keywordsTable.id},
           'name', ${keywordsTable.name},
           'aliases', ${keywordsTable.aliases}
-        ))`,
+        )) FILTER (WHERE ${keywordsTable.id} IS NOT NULL), '[]')`,
       })
       .from(papersTable)
       .innerJoin(usersTable, eq(papersTable.userId, usersTable.id))
-      .innerJoin(
+      .leftJoin(
         paperKeywordsTable,
         eq(papersTable.id, paperKeywordsTable.paperId)
       )
-      .innerJoin(
+      .leftJoin(
         keywordsTable,
         eq(keywordsTable.id, paperKeywordsTable.keywordId)
       )
@@ -396,19 +396,19 @@ export class PapersController {
           name: usersTable.name,
           email: usersTable.email,
         },
-        keywords: sql<any>`json_agg(json_build_object(
+        keywords: sql<any>`COALESCE(json_agg(json_build_object(
           'id', ${keywordsTable.id},
           'name', ${keywordsTable.name},
           'aliases', ${keywordsTable.aliases}
-        ))`,
+        )) FILTER (WHERE ${keywordsTable.id} IS NOT NULL), '[]')`,
       })
       .from(papersTable)
       .innerJoin(usersTable, eq(papersTable.userId, usersTable.id))
-      .innerJoin(
+      .leftJoin(
         paperKeywordsTable,
         eq(papersTable.id, paperKeywordsTable.paperId)
       )
-      .innerJoin(
+      .leftJoin(
         keywordsTable,
         eq(keywordsTable.id, paperKeywordsTable.keywordId)
       )

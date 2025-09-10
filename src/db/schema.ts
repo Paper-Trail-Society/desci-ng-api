@@ -154,11 +154,7 @@ export const keywordsTable = pgTable(
 
 export const fieldsTable = pgTable("fields", {
   id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  content: text("content").notNull(),
-  abstract: text("abstract").notNull(),
-  userId: text("user_id"),
-  name: varchar("name", { length: 100 }).notNull(),
+  name: varchar("name").notNull(),
 });
 
 export const categoriesTable = pgTable("categories", {
