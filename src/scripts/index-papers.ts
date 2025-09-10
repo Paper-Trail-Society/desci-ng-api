@@ -37,6 +37,8 @@ const generateRandomPassword = () => {
   return password;
 };
 
+const emailToPasswordMap: Record<string, any> = {};
+
 const indexPaper = async (row: CsvObjectType) => {
   const [category] = await db
     .select()
@@ -104,18 +106,27 @@ const indexPaper = async (row: CsvObjectType) => {
     }
   );
 
-  const user = await signUpResponse.json();
+  console.log({signUpResponse})
+
+  const res = await signUpResponse.json();
+  let user;
+  console.log({ res });
 
   if (signUpResponse.ok) {
-    console.log({ user });
-
-    await db
-      .insert(papersTable)
-      .values({ ...paperCreationPayload, userId: user.user.id as string })
-      .execute();
-
-    console.log(`📄 Inserted paper: ${row.paper_name}`);
+    user = res.user;
+    if (!emailToPasswordMap[signUpPayload.email]) {
+      emailToPasswordMap[signUpPayload.email] = user;
+    }
+  } else {
+    user = emailToPasswordMap[signUpPayload.email];
   }
+console.log({user})
+  await db
+    .insert(papersTable)
+    .values({ ...paperCreationPayload, userId: user.id as string })
+    .execute();
+
+  console.log(`📄 Inserted paper: ${row.paper_name}`);
 };
 
 async function parseCsvAndInsert(filePath: string) {
