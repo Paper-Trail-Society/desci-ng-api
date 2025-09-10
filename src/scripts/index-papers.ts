@@ -9,6 +9,8 @@ import { ipfsService } from "../utils/ipfs";
 type CsvObjectType = {
   author: string;
   email: string;
+  abstract: string;
+  note: string;
   institution: string;
   field: string;
   category: string;
@@ -58,8 +60,6 @@ const indexPaper = async (row: CsvObjectType) => {
       .returning();
   }
   console.log({ institution });
-  const abstract = "Dummy abstract";
-
   const fileResponse = await fetch(row.github_url);
   const fileBlob = new Blob([await fileResponse.arrayBuffer()]);
 
@@ -73,8 +73,8 @@ const indexPaper = async (row: CsvObjectType) => {
 
   const paperCreationPayload = {
     title: row.paper_name.trim(),
-    abstract,
-    notes: "Dummy note",
+    abstract: row.abstract,
+    notes: row.note,
     categoryId: category.id,
     ipfsCid: ipfsResponse.cid,
     ipfsUrl: `https://${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`,
@@ -155,7 +155,10 @@ async function parseCsvAndInsert(filePath: string) {
     console.log({ row });
 
     // remove leading and trailing asterisks from the author name
-    const authorName = row.author.split(',')[0].replace(/^\*|\*$/g, '').trim();
+    const authorName = row.author
+      .split(",")[0]
+      .replace(/^\*|\*$/g, "")
+      .trim();
     row.author = authorName;
 
     await indexPaper(row);
