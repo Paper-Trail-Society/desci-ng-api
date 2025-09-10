@@ -5,7 +5,6 @@ import * as schema from "../db/schema";
 import { db } from "./db";
 import { emailService } from "./email";
 
-
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -20,6 +19,9 @@ export const auth = betterAuth({
   trustedOrigins: (process.env.BETTER_AUTH_TRUSTED_ORIGINS || "")
     .split(",")
     .filter(Boolean),
+  rateLimit: {
+    enabled: false,
+  },
   basePath: "/auth",
   user: {
     additionalFields: {
@@ -81,4 +83,3 @@ export const auth = betterAuth({
   },
   plugins: [openAPI(), jwt(), bearer()],
 });
-

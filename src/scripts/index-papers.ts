@@ -2,7 +2,12 @@ import "dotenv/config";
 import fs from "fs";
 import csv from "csv-parser";
 import { db } from "../utils/db";
-import { categoriesTable, institutionsTable, papersTable } from "../db/schema";
+import {
+  categoriesTable,
+  institutionsTable,
+  papersTable,
+  usersTable,
+} from "../db/schema";
 import { eq } from "drizzle-orm";
 import { ipfsService } from "../utils/ipfs";
 
@@ -37,7 +42,7 @@ const generateRandomPassword = () => {
   return password;
 };
 
-const emailToPasswordMap: Record<string, any> = {};
+const emailToUserMap: Record<string, any> = {};
 
 const indexPaper = async (row: CsvObjectType) => {
   const [category] = await db
@@ -95,36 +100,65 @@ const indexPaper = async (row: CsvObjectType) => {
 
   console.log({ signUpPayload });
 
-  const signUpResponse = await fetch(
-    `${process.env.BETTER_AUTH_URL}/auth/sign-up/email`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(signUpPayload),
-    }
-  );
+  // get user with the email from DB
 
-  console.log({signUpResponse})
+  if (!emailToUserMap[signUpPayload.email.toLowerCase()]) {
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(
+        eq(usersTable.email, signUpPayload.email.toLowerCase().toLowerCase())
+      )
+      .limit(1)
+      .execute();
 
-  const res = await signUpResponse.json();
-  let user;
-  console.log({ res });
-
-  if (signUpResponse.ok) {
-    user = res.user;
-    if (!emailToPasswordMap[signUpPayload.email]) {
-      emailToPasswordMap[signUpPayload.email] = user;
-    }
-  } else {
-    user = emailToPasswordMap[signUpPayload.email];
+    emailToUserMap[signUpPayload.email.toLowerCase().toLowerCase()] = user;
   }
-console.log({user})
-  await db
-    .insert(papersTable)
-    .values({ ...paperCreationPayload, userId: user.id as string })
+
+  let user = emailToUserMap[signUpPayload.email.toLowerCase()];
+
+  console.log({ user }, "before signing up");
+
+  if (!emailToUserMap[signUpPayload.email.toLowerCase()]) {
+    const signUpResponse = await fetch(
+      `${process.env.BETTER_AUTH_URL}/auth/sign-up/email`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(signUpPayload),
+      }
+    );
+
+    console.log({ signUpResponse });
+
+    const res = await signUpResponse.json();
+    console.log({ res });
+
+    if (signUpResponse.ok && signUpResponse.status === 200) {
+      user = res.user;
+      if (!emailToUserMap[signUpPayload.email.toLowerCase()]) {
+        emailToUserMap[signUpPayload.email.toLowerCase()] = user;
+      }
+    } else {
+      user = emailToUserMap[signUpPayload.email.toLowerCase()];
+    }
+  }
+
+  console.log({ user });
+  const existingPaper = await db
+    .select()
+    .from(papersTable)
+    .where(eq(papersTable.title, paperCreationPayload.title))
+    .limit(1)
     .execute();
+  if (existingPaper.length === 0) {
+    await db
+      .insert(papersTable)
+      .values({ ...paperCreationPayload, userId: user.id as string })
+      .execute();
+  }
 
   console.log(`📄 Inserted paper: ${row.paper_name}`);
 };
