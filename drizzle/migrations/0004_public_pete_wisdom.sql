@@ -52,7 +52,7 @@ CREATE TABLE "admins" (
 	CONSTRAINT "admins_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
-ALTER TABLE "papers" ADD COLUMN "status" varchar(255) NOT NULL;--> statement-breakpoint
+ALTER TABLE "papers" ADD COLUMN "status" varchar(255) DEFAULT 'pending' NOT NULL;--> statement-breakpoint
 ALTER TABLE "papers" ADD COLUMN "reviewed_by" text;--> statement-breakpoint
 ALTER TABLE "papers" ADD COLUMN "rejection_reason" text;--> statement-breakpoint
 ALTER TABLE "papers" ADD COLUMN "deleted_at" timestamp;--> statement-breakpoint

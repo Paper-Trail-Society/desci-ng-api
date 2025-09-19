@@ -17,16 +17,15 @@ export const adminsTable = pgTable("admins", {
   name: varchar("name").notNull(),
   email: varchar("email").notNull().unique(),
   emailVerified: boolean("email_verified")
-  .$defaultFn(() => false)
-  .notNull(),
+    .$defaultFn(() => false)
+    .notNull(),
   createdAt: timestamp("created_at")
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
   updatedAt: timestamp("updated_at")
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
-})
-
+});
 
 export const adminSessionsTable = pgTable("admin_sessions", {
   id: text("id").primaryKey(),
@@ -65,10 +64,10 @@ export const adminVerificationsTable = pgTable("admin_verifications", {
   value: text("value").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").$defaultFn(
-    () => /* @__PURE__ */ new Date()
+    () => /* @__PURE__ */ new Date(),
   ),
   updatedAt: timestamp("updated_at").$defaultFn(
-    () => /* @__PURE__ */ new Date()
+    () => /* @__PURE__ */ new Date(),
   ),
 });
 
@@ -81,8 +80,6 @@ export const adminJwksTable = pgTable("admin_jwks", {
     .notNull(),
 });
 
-
-
 export const usersTable = pgTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -93,7 +90,7 @@ export const usersTable = pgTable("users", {
     .notNull(),
   image: text("image"),
   institutionId: integer("institution_id").references(
-    () => institutionsTable.id
+    () => institutionsTable.id,
   ),
   areasOfInterest: text("areas_of_interest"),
   createdAt: timestamp("created_at")
@@ -141,10 +138,10 @@ export const verificationsTable = pgTable("verification", {
   value: text("value").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").$defaultFn(
-    () => /* @__PURE__ */ new Date()
+    () => /* @__PURE__ */ new Date(),
   ),
   updatedAt: timestamp("updated_at").$defaultFn(
-    () => /* @__PURE__ */ new Date()
+    () => /* @__PURE__ */ new Date(),
   ),
 });
 
@@ -161,8 +158,10 @@ export const papersTable = pgTable(
     categoryId: integer("category_id")
       .notNull()
       .references(() => categoriesTable.id),
-    status: varchar("status", { length: 255 }).notNull(), // pending, rejected, published
-    reviewedBy: text("reviewed_by").references(() => adminsTable.id, { onDelete: "set null" }), // approved_by should be null for existing papers
+    status: varchar("status", { length: 255 }).notNull().default("pending"), // pending, rejected, published
+    reviewedBy: text("reviewed_by").references(() => adminsTable.id, {
+      onDelete: "set null",
+    }), // approved_by should be null for existing papers
     rejectionReason: text("rejection_reason"),
     ipfsCid: varchar("ipfs_cid", { length: 80 }).notNull(),
     ipfsUrl: varchar("ipfs_url", { length: 255 }).notNull(),
@@ -185,9 +184,9 @@ export const papersTable = pgTable(
       sql`(
         setweight(to_tsvector('english', ${table.title}), 'A') ||
         setweight(to_tsvector('english', ${table.abstract}), 'B')
-    )`
+    )`,
     ),
-  ]
+  ],
 );
 
 export const paperKeywordsTable = pgTable(
@@ -203,7 +202,7 @@ export const paperKeywordsTable = pgTable(
   },
   (table) => [
     unique("paper_keywords_unique_idx").on(table.paperId, table.keywordId),
-  ]
+  ],
 );
 
 export const keywordsTable = pgTable(
@@ -217,15 +216,15 @@ export const keywordsTable = pgTable(
     // Trigram index for fast fuzzy search on name (with pg_trgm extension)
     index("keywords_name_trgm_idx").using(
       "gin",
-      sql`${table.name} gin_trgm_ops`
+      sql`${table.name} gin_trgm_ops`,
     ),
 
     // Trigram index on aliases (JSONB text values) (with pg_trgm extension)
     index("keywords_aliases_trgm_idx").using(
       "gin",
-      sql`(jsonb_path_query_array(${table.aliases}, '$[*]')::text) gin_trgm_ops`
+      sql`(jsonb_path_query_array(${table.aliases}, '$[*]')::text) gin_trgm_ops`,
     ),
-  ]
+  ],
 );
 
 export const fieldsTable = pgTable("fields", {
@@ -265,7 +264,16 @@ export type InsertUser = typeof usersTable.$inferInsert;
 export type SelectUser = typeof usersTable.$inferSelect;
 
 export type InsertPaper = typeof papersTable.$inferInsert;
-export type UpdatePaper = Omit<InsertPaper, "id" | "createdAt" | "updatedAt" | 'status' | 'reviewedBy' | 'rejectionReason' | 'deletedAt'>;
+export type UpdatePaper = Omit<
+  InsertPaper,
+  | "id"
+  | "createdAt"
+  | "updatedAt"
+  | "status"
+  | "reviewedBy"
+  | "rejectionReason"
+  | "deletedAt"
+>;
 export type SelectPaper = typeof papersTable.$inferSelect;
 
 export type InsertInstitution = typeof institutionsTable.$inferInsert;
