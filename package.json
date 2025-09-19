@@ -2,6 +2,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "@types/morgan": "^1.9.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.2.1",
     "dotenv": "^17.2.2",
@@ -42,6 +43,7 @@
     "csv-parser": "^3.2.0",
     "drizzle-orm": "^0.44.4",
     "express": "^5.1.0",
+    "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "netlify-cli": "^23.1.4",
     "pinata": "^2.4.9",
