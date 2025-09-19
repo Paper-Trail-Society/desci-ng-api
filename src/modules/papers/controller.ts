@@ -4,6 +4,7 @@ import {
   fetchPapersQueryParams,
   getPaperSchema,
   updatePaper,
+  updatePaperStatusSchema,
   uploadPaper,
 } from "./schema";
 import { ipfsService } from "../../utils/ipfs";
@@ -20,6 +21,7 @@ import {
 import { desc, eq, sql, count as drizzleCount, inArray } from "drizzle-orm";
 import z from "zod";
 import type { AuthenticatedRequest } from "../../middlewares/auth";
+import type { AuthenticatedAdminRequest } from "middlewares/auth/admin-auth";
 
 interface MulterRequest extends AuthenticatedRequest {
   file?: Express.Multer.File;
@@ -71,7 +73,7 @@ export class PapersController {
 
     // filter out the IDs that exists in body.keywords but not in keywordIds
     const invalidKeywordIds = body.keywords.filter(
-      (id) => !keywordIdsInDB.find((keyword) => keyword.id === id)
+      (id) => !keywordIdsInDB.find((keyword) => keyword.id === id),
     );
 
     if (invalidKeywordIds.length > 0) {
@@ -108,7 +110,7 @@ export class PapersController {
     const fileBlob = new Blob([fs.readFileSync(file.path)]);
 
     const ipfsResponse = await ipfsService.uploadFile(
-      new File([fileBlob], file.originalname, { type: file.mimetype })
+      new File([fileBlob], file.originalname, { type: file.mimetype }),
     );
 
     const createdPaper = await db.transaction(async (tx) => {
@@ -123,6 +125,7 @@ export class PapersController {
           ipfsCid: ipfsResponse.cid,
           ipfsUrl: `https://${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`,
           userId,
+          status: "pending",
         })
         .returning();
 
@@ -143,7 +146,7 @@ export class PapersController {
           if (error.code === "23505") {
             // PostgreSQL unique violation error code
             console.error(
-              "Unique constraint violation: This keyword attachment already exists."
+              "Unique constraint violation: This keyword attachment already exists.",
             );
             existingKeywordAttachments.push(keywordId);
           }
@@ -154,7 +157,7 @@ export class PapersController {
         return res.status(400).json({
           status: "error",
           message: `Keyword attachments already exist for the following keyword IDs: ${existingKeywordAttachments.join(
-            ", "
+            ", ",
           )}`,
         });
       }
@@ -164,8 +167,25 @@ export class PapersController {
     return res.status(201).json(createdPaper);
   }
 
-  async index(req: Request, res: Response) {
-    const { categoryId, fieldId, userId, search, page, size } =
+  /**
+   * Get all papers, paginated and filtered by category, field, and search.
+   *
+   * @param {Request} req - Request object containing query parameters.
+   * @param {Response} res - Response object to be returned.
+   * @returns {Promise<Response>} - Promise resolving to a response object.
+   *
+   * Query parameters:
+   * - page: Page number for pagination
+   * - size: Number of items per page
+   * - categoryId: Filter by category ID
+   * - fieldId: Filter by field ID
+   * - search: Filter by title and abstract
+   * - status: Filter by status (only applicable for admins)
+   * - userId: Filter by user ID
+   */
+
+  async index(req: AuthenticatedAdminRequest, res: Response) {
+    const { categoryId, fieldId, userId, search, status, page, size } =
       fetchPapersQueryParams.parse(req.query);
 
     const offset = (page - 1) * size;
@@ -176,6 +196,7 @@ export class PapersController {
         id: papersTable.id,
         title: papersTable.title,
         abstract: papersTable.abstract,
+        status: papersTable.status,
         notes: papersTable.notes,
         ipfsCid: papersTable.ipfsCid,
         ipfsUrl: papersTable.ipfsUrl,
@@ -198,11 +219,11 @@ export class PapersController {
       .innerJoin(usersTable, eq(papersTable.userId, usersTable.id))
       .leftJoin(
         paperKeywordsTable,
-        eq(papersTable.id, paperKeywordsTable.paperId)
+        eq(papersTable.id, paperKeywordsTable.paperId),
       )
       .leftJoin(
         keywordsTable,
-        eq(keywordsTable.id, paperKeywordsTable.keywordId)
+        eq(keywordsTable.id, paperKeywordsTable.keywordId),
       )
       .$dynamic();
 
@@ -210,6 +231,19 @@ export class PapersController {
       .select({ count: drizzleCount(papersTable.id) })
       .from(papersTable)
       .$dynamic();
+
+    const DEFAULT_VIEWABLE_PAPER_STATUS = "published";
+    if (!req.admin) {
+      baseQuery = baseQuery.where(
+        eq(papersTable.status, DEFAULT_VIEWABLE_PAPER_STATUS),
+      );
+      countQuery = countQuery.where(
+        eq(papersTable.status, DEFAULT_VIEWABLE_PAPER_STATUS),
+      );
+    } else if (status && req.admin) {
+      baseQuery = baseQuery.where(eq(papersTable.status, status));
+      countQuery = countQuery.where(eq(papersTable.status, status));
+    }
 
     if (userId) {
       baseQuery = baseQuery.where(eq(papersTable.userId, userId));
@@ -220,7 +254,7 @@ export class PapersController {
       baseQuery = baseQuery
         .innerJoin(
           categoriesTable,
-          eq(papersTable.categoryId, categoriesTable.id)
+          eq(papersTable.categoryId, categoriesTable.id),
         )
         .innerJoin(fieldsTable, eq(categoriesTable.fieldId, fieldsTable.id))
         .where(eq(fieldsTable.id, fieldId));
@@ -228,7 +262,7 @@ export class PapersController {
       countQuery = countQuery
         .innerJoin(
           categoriesTable,
-          eq(papersTable.categoryId, categoriesTable.id)
+          eq(papersTable.categoryId, categoriesTable.id),
         )
         .innerJoin(fieldsTable, eq(categoriesTable.fieldId, fieldsTable.id))
         .where(eq(fieldsTable.id, fieldId));
@@ -339,13 +373,12 @@ export class PapersController {
       const ipfsResponse = await ipfsService.uploadFile(
         new File([fileBlob], req.file.originalname, {
           type: req.file.mimetype,
-        })
+        }),
       );
 
       updatePayload["ipfsCid"] = ipfsResponse.cid;
-      updatePayload[
-        "ipfsUrl"
-      ] = `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`;
+      updatePayload["ipfsUrl"] =
+        `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`;
     }
 
     // Verify the paper belongs to the authenticated user before updating
@@ -406,11 +439,11 @@ export class PapersController {
       .innerJoin(usersTable, eq(papersTable.userId, usersTable.id))
       .leftJoin(
         paperKeywordsTable,
-        eq(papersTable.id, paperKeywordsTable.paperId)
+        eq(papersTable.id, paperKeywordsTable.paperId),
       )
       .leftJoin(
         keywordsTable,
-        eq(keywordsTable.id, paperKeywordsTable.keywordId)
+        eq(keywordsTable.id, paperKeywordsTable.keywordId),
       )
       .where(eq(papersTable.id, paperId))
       .groupBy(papersTable.id, usersTable.id, usersTable.name, usersTable.email)
@@ -428,5 +461,52 @@ export class PapersController {
 
   async delete(req: Request, res: Response) {
     // no-op
+  }
+
+  async updatePaperStatus(req: AuthenticatedAdminRequest, res: Response) {
+    if (!req.admin) {
+      return res.status(401).json({
+        status: "error",
+        message: "Admin authentication required. Please sign in to continue.",
+      });
+    }
+
+    const { id: paperId } = getPaperSchema.parse(req.params);
+
+    const [existingPaper] = await db
+      .select()
+      .from(papersTable)
+      .where(eq(papersTable.id, paperId));
+
+    if (!existingPaper) {
+      return res.status(404).json({
+        error: "Paper not found",
+      });
+    }
+
+    // update paper status pased on payload
+    const { status, rejectionReason } = updatePaperStatusSchema.parse(req.body);
+    const reviewedBy =
+      status === "published" || status === "rejected" ? req.admin.id : null;
+
+    if (status === "rejected" && !rejectionReason) {
+      return res.status(400).json({
+        errors: {
+          rejectionReason: "Rejection reason is required",
+        },
+      });
+    }
+
+    const [updatedPaper] = await db
+      .update(papersTable)
+      .set({
+        status,
+        reviewedBy,
+        rejectionReason: status === "rejected" ? rejectionReason : null,
+      })
+      .where(eq(papersTable.id, paperId))
+      .returning();
+
+    return res.status(200).json(updatedPaper);
   }
 }
