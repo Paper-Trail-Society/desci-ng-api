@@ -11,7 +11,7 @@ import {
 } from "./schema";
 import z from "zod";
 import { requireAuth } from "../../middlewares/auth";
-import { adminAuthMiddleware } from "middlewares/auth/admin-auth";
+import { adminAuthMiddleware } from "../../middlewares/auth/admin-auth";
 
 export const papersRouter = Router();
 const papersController = new PapersController();
@@ -35,20 +35,20 @@ papersRouter.post(
   requireAuth,
   upload.single("file"),
   validateRequest("body", uploadPaper),
-  async (req, res) => papersController.create(req, res)
+  async (req, res) => papersController.create(req, res),
 );
 
 papersRouter.get(
   "/papers",
   adminAuthMiddleware({ optional: true }),
   validateRequest("query", fetchPapersQueryParams),
-  async (req, res) => papersController.index(req, res)
+  async (req, res) => papersController.index(req, res),
 );
 
 papersRouter.get(
   "/papers/:id",
   validateRequest("params", getPaperSchema),
-  async (req, res) => papersController.getPaperById(req, res)
+  async (req, res) => papersController.getPaperById(req, res),
 );
 
 papersRouter.put(
@@ -56,11 +56,11 @@ papersRouter.put(
   requireAuth,
   validateRequest(
     "params",
-    z.object({ id: z.preprocess((v) => Number(v), z.number()) })
+    z.object({ id: z.preprocess((v) => Number(v), z.number()) }),
   ),
   upload.single("pdfFile"),
   validateRequest("body", updatePaper),
-  async (req, res) => papersController.update(req, res)
+  async (req, res) => papersController.update(req, res),
 );
 
 papersRouter.put(
@@ -68,5 +68,5 @@ papersRouter.put(
   adminAuthMiddleware({}),
   validateRequest("params", getPaperSchema),
   validateRequest("body", updatePaperStatusSchema),
-  async (req, res) => papersController.updatePaperStatus(req, res)
+  async (req, res) => papersController.updatePaperStatus(req, res),
 );

@@ -21,7 +21,7 @@ import {
 import { desc, eq, sql, count as drizzleCount, inArray } from "drizzle-orm";
 import z from "zod";
 import type { AuthenticatedRequest } from "../../middlewares/auth";
-import type { AuthenticatedAdminRequest } from "middlewares/auth/admin-auth";
+import type { AuthenticatedAdminRequest } from "../../middlewares/auth/admin-auth";
 
 interface MulterRequest extends AuthenticatedRequest {
   file?: Express.Multer.File;
