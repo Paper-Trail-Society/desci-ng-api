@@ -19,7 +19,7 @@ npm install
 # Start docker services
 docker compose up -d
 
-# Prepare database tables for usage 
+# Prepare database tables for usage
 
 npm run prepare:dev
 
@@ -30,8 +30,6 @@ npm run dev
 npm run build
 npm start
 
-# Deploy to Netlify
-npm run netlify:deploy
 ```
 
 ## Database
@@ -67,21 +65,13 @@ npm run db:studio
 - PostgreSQL with Drizzle ORM
 - ESLint and Prettier for code quality
 
-## Deployment
-
-Configured for Netlify:
-- Serverless functions in `netlify/functions`
-- Redirects configured in `netlify.toml`
-- Environment variables must be set in Netlify dashboard
-
 ## Scripts
 
 - `npm run dev` - Start dev server with hot reload
 - `npm run prepare:dev` - Prepares database - database generation, migration, and seeding.
+- `npm run prepare:prod` - Prepares database - database migration and seeding, runs before deployment on prod.
 - `npm run build` - Compile TypeScript
 - `npm start` - Run production build
-- `npm run netlify:dev` - Test Netlify deployment locally
-- `npm run netlify:deploy` - Deploy to Netlify
 - `npm run db:generate` - Generate database migrations
 - `npm run db:migrate` - Run database migrations
 - `npm run db:check` - Verify database schema
