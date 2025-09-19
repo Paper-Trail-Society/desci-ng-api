@@ -14,11 +14,16 @@ const route_1 = require("./modules/fields/route");
 const route_2 = require("./modules/keywords/route");
 const route_3 = require("./modules/papers/route");
 const auth_2 = require("./utils/auth");
+const admin_auth_1 = require("./utils/admin-auth");
 const db_1 = require("./utils/db");
+const morgan_1 = __importDefault(require("morgan"));
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
+app.use((0, morgan_1.default)("dev"));
 app.use((0, cors_1.default)({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (process.env.FRONTEND_URLS || "http://localhost:3000,http://localhost:3001")
+        .split(",")
+        .filter(Boolean),
     credentials: true, // Allow cookies and Authorization headers
     allowedHeaders: [
         "Origin",
@@ -33,8 +38,21 @@ app.use((0, cors_1.default)({
 // Therefore, the better-auth handler must be mounted before any middleware that parses the request body,
 // such as express.json()
 app.all("/auth/{*any}", (0, node_1.toNodeHandler)(auth_2.auth));
+app.all("/admin-auth/{*any}", (0, node_1.toNodeHandler)(admin_auth_1.adminAuth));
 app.get("/user/me", async (req, res) => {
     const session = await auth_2.auth.api.getSession({
+        headers: (0, node_1.fromNodeHeaders)(req.headers),
+    });
+    if (!session) {
+        return res.status(401).json({
+            status: "error",
+            message: "Authentication required to get user details",
+        });
+    }
+    return res.json(session);
+});
+app.get("/admin/me", async (req, res) => {
+    const session = await admin_auth_1.adminAuth.api.getSession({
         headers: (0, node_1.fromNodeHeaders)(req.headers),
     });
     if (!session) {

@@ -10,14 +10,21 @@ import { fieldRouter } from "./modules/fields/route";
 import { keywordRouter } from "./modules/keywords/route";
 import { papersRouter } from "./modules/papers/route";
 import { auth } from "./utils/auth";
+import { adminAuth } from "./utils/admin-auth";
 import { db } from "./utils/db";
+import morgan from "morgan";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+app.use(morgan("dev"));
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (
+      process.env.FRONTEND_URLS || "http://localhost:3000,http://localhost:3001"
+    )
+      .split(",")
+      .filter(Boolean),
     credentials: true, // Allow cookies and Authorization headers
     allowedHeaders: [
       "Origin",
@@ -27,16 +34,31 @@ app.use(
       "Authorization",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  })
+  }),
 );
 
 // better-auth requires access to the raw request body to handle authentication requests correctly.
 // Therefore, the better-auth handler must be mounted before any middleware that parses the request body,
 // such as express.json()
 app.all("/auth/{*any}", toNodeHandler(auth));
+app.all("/admin-auth/{*any}", toNodeHandler(adminAuth));
 
 app.get("/user/me", async (req, res) => {
   const session = await auth.api.getSession({
+    headers: fromNodeHeaders(req.headers),
+  });
+
+  if (!session) {
+    return res.status(401).json({
+      status: "error",
+      message: "Authentication required to get user details",
+    });
+  }
+  return res.json(session);
+});
+
+app.get("/admin/me", async (req, res) => {
+  const session = await adminAuth.api.getSession({
     headers: fromNodeHeaders(req.headers),
   });
 
@@ -152,7 +174,7 @@ app.get(
         error: error instanceof Error ? error.message : String(error),
       });
     }
-  }
+  },
 );
 
 // Get all institutions
