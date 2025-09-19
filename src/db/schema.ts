@@ -12,6 +12,77 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+export const adminsTable = pgTable("admins", {
+  id: text("id").primaryKey(),
+  name: varchar("name").notNull(),
+  email: varchar("email").notNull().unique(),
+  emailVerified: boolean("email_verified")
+  .$defaultFn(() => false)
+  .notNull(),
+  createdAt: timestamp("created_at")
+    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .notNull(),
+  updatedAt: timestamp("updated_at")
+    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .notNull(),
+})
+
+
+export const adminSessionsTable = pgTable("admin_sessions", {
+  id: text("id").primaryKey(),
+  expiresAt: timestamp("expires_at").notNull(),
+  token: text("token").notNull().unique(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  userId: text("user_id")
+    .notNull()
+    .references(() => adminsTable.id, { onDelete: "cascade" }),
+});
+
+export const adminAccountsTable = pgTable("admin_accounts", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull(),
+  providerId: text("provider_id").notNull(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => adminsTable.id, { onDelete: "cascade" }),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  idToken: text("id_token"),
+  accessTokenExpiresAt: timestamp("access_token_expires_at"),
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+  scope: text("scope"),
+  password: text("password"),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+});
+
+export const adminVerificationsTable = pgTable("admin_verifications", {
+  id: text("id").primaryKey(),
+  identifier: text("identifier").notNull(),
+  value: text("value").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").$defaultFn(
+    () => /* @__PURE__ */ new Date()
+  ),
+  updatedAt: timestamp("updated_at").$defaultFn(
+    () => /* @__PURE__ */ new Date()
+  ),
+});
+
+export const adminJwksTable = pgTable("admin_jwks", {
+  id: text("id").primaryKey(),
+  publicKey: text("public_key").notNull(),
+  privateKey: text("private_key").notNull(),
+  createdAt: timestamp("created_at")
+    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
+
+
 export const usersTable = pgTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -90,18 +161,23 @@ export const papersTable = pgTable(
     categoryId: integer("category_id")
       .notNull()
       .references(() => categoriesTable.id),
+    status: varchar("status", { length: 255 }).notNull(), // pending, rejected, published
+    reviewedBy: text("reviewed_by").references(() => adminsTable.id, { onDelete: "set null" }), // approved_by should be null for existing papers
+    rejectionReason: text("rejection_reason"),
     ipfsCid: varchar("ipfs_cid", { length: 80 }).notNull(),
     ipfsUrl: varchar("ipfs_url", { length: 255 }).notNull(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
       .$onUpdate(() => new Date()),
+    deletedAt: timestamp("deleted_at"),
   },
   (table) => [
     index("title_idx").on(table.title),
     index("abstract_idx").on(table.abstract),
     index("category_id_idx").on(table.categoryId),
     index("user_id_idx").on(table.userId),
+    index("status_idx").on(table.status),
 
     // index("keywords_gin_idx").using("gin", table.keywords),
     index("search_index").using(
@@ -189,7 +265,7 @@ export type InsertUser = typeof usersTable.$inferInsert;
 export type SelectUser = typeof usersTable.$inferSelect;
 
 export type InsertPaper = typeof papersTable.$inferInsert;
-export type UpdatePaper = Omit<InsertPaper, "id" | "createdAt" | "updatedAt">;
+export type UpdatePaper = Omit<InsertPaper, "id" | "createdAt" | "updatedAt" | 'status' | 'reviewedBy' | 'rejectionReason' | 'deletedAt'>;
 export type SelectPaper = typeof papersTable.$inferSelect;
 
 export type InsertInstitution = typeof institutionsTable.$inferInsert;
