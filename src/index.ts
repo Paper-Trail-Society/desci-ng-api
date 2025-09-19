@@ -17,20 +17,14 @@ import morgan from "morgan";
 const app = express();
 const port = process.env.PORT || 3000;
 
-if (!process.env.FRONTEND_URLS) {
-  throw new Error(
-    "[FRONTEND_URLS] is a required environment variable. It should a comma-separated values of URLs",
-  );
-}
-
 app.use(morgan("dev"));
 app.use(
   cors({
-    origin: [
-      process.env.FRONTEND_URLS,
-      "http://localhost:3000",
-      "http://localhost:3001",
-    ],
+    origin: (
+      process.env.FRONTEND_URLS || "http://localhost:3000,http://localhost:3001"
+    )
+      .split(",")
+      .filter(Boolean),
     credentials: true, // Allow cookies and Authorization headers
     allowedHeaders: [
       "Origin",
