@@ -51,22 +51,24 @@ papersRouter.get(
   async (req, res) => papersController.getPaperById(req, res),
 );
 
+// need to merge optional admin auth and required user auth middleware for this route
 papersRouter.put(
   "/papers/:id",
+  adminAuthMiddleware({ optional: true }),
   requireAuth,
   validateRequest(
     "params",
     z.object({ id: z.preprocess((v) => Number(v), z.number()) }),
   ),
-  upload.single("pdfFile"),
+  upload.single("file"),
   validateRequest("body", updatePaper),
   async (req, res) => papersController.update(req, res),
 );
 
-papersRouter.put(
-  "/papers/:id/update-status",
-  adminAuthMiddleware({}),
-  validateRequest("params", getPaperSchema),
-  validateRequest("body", updatePaperStatusSchema),
-  async (req, res) => papersController.updatePaperStatus(req, res),
-);
+// papersRouter.put(
+//   "/papers/:id/update-status",
+//   adminAuthMiddleware({}),
+//   validateRequest("params", getPaperSchema),
+//   validateRequest("body", updatePaperStatusSchema),
+//   async (req, res) => papersController.updatePaperStatus(req, res),
+// );

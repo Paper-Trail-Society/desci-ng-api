@@ -1,11 +1,9 @@
 import "dotenv/config";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import cors from "cors";
-import { eq } from "drizzle-orm";
 import type { Request, Response } from "express";
 import express from "express";
-import { institutionsTable, papersTable, usersTable } from "./db/schema";
-import { requireAuth, type AuthenticatedRequest } from "./middlewares/auth";
+import { institutionsTable, usersTable } from "./db/schema";
 import { fieldRouter } from "./modules/fields/route";
 import { keywordRouter } from "./modules/keywords/route";
 import { papersRouter } from "./modules/papers/route";
@@ -138,44 +136,6 @@ app.get("/health", async (req: Request, res: Response) => {
     });
   }
 });
-
-// Protected endpoint to get current user's papers
-app.get(
-  "/papers/my",
-  requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const userId = req.user!.id;
-
-      // Fetch all papers belonging to the authenticated user
-      const userPapers = await db
-        .select()
-        .from(papersTable)
-        .where(eq(papersTable.userId, userId));
-
-      res.json({
-        status: "success",
-        papers: userPapers.map((paper) => ({
-          id: paper.id,
-          title: paper.title,
-          abstract: paper.abstract,
-          ipfsCid: paper.ipfsCid,
-          ipfsUrl: paper.ipfsUrl,
-          createdAt: paper.createdAt,
-          updatedAt: paper.updatedAt,
-        })),
-        count: userPapers.length,
-      });
-    } catch (error) {
-      console.error("Failed to fetch user papers:", error);
-      res.status(500).json({
-        status: "error",
-        message: "Failed to retrieve your papers",
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  },
-);
 
 // Get all institutions
 app.get("/institutions", async (_req: Request, res: Response) => {
