@@ -145,13 +145,13 @@ export class PapersController {
         }
       }
 
-      if (existingKeywordAttachments.length > 0) {
-        return res.status(400).json({
-          error: `Keyword attachments already exist for the following keyword IDs: ${existingKeywordAttachments.join(
-            ", ",
-          )}`,
-        });
-      }
+      // if (existingKeywordAttachments.length > 0) {
+      //   return res.status(400).json({
+      //     error: `Keyword attachments already exist for the following keyword IDs: ${existingKeywordAttachments.join(
+      //       ", ",
+      //     )}`,
+      //   });
+      // }
       return newPaper;
     });
 
