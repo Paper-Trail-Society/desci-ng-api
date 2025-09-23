@@ -61,11 +61,11 @@ export class PapersController {
     const keywordIdsInDB = await db
       .select({ id: keywordsTable.id })
       .from(keywordsTable)
-      .where(inArray(keywordsTable.id, body.keywords))
+      .where(inArray(keywordsTable.id, body.keywords ?? []))
       .execute();
 
     // filter out the IDs that exists in body.keywords but not in keywordIds
-    const invalidKeywordIds = body.keywords.filter(
+    const invalidKeywordIds = (body.keywords ?? []).filter(
       (id) => !keywordIdsInDB.find((keyword) => keyword.id === id),
     );
 
