@@ -266,13 +266,7 @@ export type SelectUser = typeof usersTable.$inferSelect;
 export type InsertPaper = typeof papersTable.$inferInsert;
 export type UpdatePaper = Omit<
   InsertPaper,
-  | "id"
-  | "createdAt"
-  | "updatedAt"
-  | "status"
-  | "reviewedBy"
-  | "rejectionReason"
-  | "deletedAt"
+  "id" | "createdAt" | "updatedAt" | "deletedAt"
 >;
 export type SelectPaper = typeof papersTable.$inferSelect;
 

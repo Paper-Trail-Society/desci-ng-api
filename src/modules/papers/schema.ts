@@ -32,6 +32,8 @@ export const updatePaper = z.object({
   categoryId: z.preprocess((v) => Number(v), z.number()).optional(),
   keywords: z.array(z.string()).optional(),
   notes: z.string().optional(),
+  status: z.enum(["pending", "published", "rejected"]).optional(),
+  rejectionReason: z.string().optional(),
 });
 
 export const getPaperSchema = z.object({
@@ -41,4 +43,4 @@ export const getPaperSchema = z.object({
 export const updatePaperStatusSchema = z.object({
   status: z.enum(["pending", "published", "rejected"]),
   rejectionReason: z.string().optional(),
-})
+});

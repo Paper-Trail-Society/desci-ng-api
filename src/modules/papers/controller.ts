@@ -20,20 +20,14 @@ import {
 } from "../../db/schema";
 import { desc, eq, sql, count as drizzleCount, inArray } from "drizzle-orm";
 import z from "zod";
-import type { AuthenticatedRequest } from "../../middlewares/auth";
-import type { AuthenticatedAdminRequest } from "../../middlewares/auth/admin-auth";
-
-interface MulterRequest extends AuthenticatedRequest {
-  file?: Express.Multer.File;
-}
+import { AuthenticatedRequest, MulterRequest } from "types";
 
 export class PapersController {
   async create(req: MulterRequest, res: Response) {
     const body = uploadPaper.parse(req.body);
     if (!req.file) {
       return res.status(400).json({
-        status: "error",
-        message: "No PDF file uploaded",
+        error: "No PDF file uploaded",
       });
     }
 
@@ -61,7 +55,6 @@ export class PapersController {
     //     }
     //   }
 
-    console.log({ user: req.user });
     const userId = req.user!.id; // Use authenticated user's ID
 
     // get the ID of all keywords matching the keyword IDs in body.keywords with an SQL IN query
@@ -78,8 +71,7 @@ export class PapersController {
 
     if (invalidKeywordIds.length > 0) {
       return res.status(400).json({
-        status: "error",
-        message: `Invalid keyword IDs: ${invalidKeywordIds.join(", ")}`,
+        error: `Invalid keyword IDs: ${invalidKeywordIds.join(", ")}`,
       });
     }
 
@@ -155,8 +147,7 @@ export class PapersController {
 
       if (existingKeywordAttachments.length > 0) {
         return res.status(400).json({
-          status: "error",
-          message: `Keyword attachments already exist for the following keyword IDs: ${existingKeywordAttachments.join(
+          error: `Keyword attachments already exist for the following keyword IDs: ${existingKeywordAttachments.join(
             ", ",
           )}`,
         });
@@ -167,24 +158,7 @@ export class PapersController {
     return res.status(201).json(createdPaper);
   }
 
-  /**
-   * Get all papers, paginated and filtered by category, field, and search.
-   *
-   * @param {Request} req - Request object containing query parameters.
-   * @param {Response} res - Response object to be returned.
-   * @returns {Promise<Response>} - Promise resolving to a response object.
-   *
-   * Query parameters:
-   * - page: Page number for pagination
-   * - size: Number of items per page
-   * - categoryId: Filter by category ID
-   * - fieldId: Filter by field ID
-   * - search: Filter by title and abstract
-   * - status: Filter by status (only applicable for admins)
-   * - userId: Filter by user ID
-   */
-
-  async index(req: AuthenticatedAdminRequest, res: Response) {
+  async index(req: AuthenticatedRequest, res: Response) {
     const { categoryId, fieldId, userId, search, status, page, size } =
       fetchPapersQueryParams.parse(req.query);
 
@@ -286,9 +260,7 @@ export class PapersController {
       )`);
     }
 
-    const [{ count: total }] = await countQuery
-      // .groupBy(papersTable.id, usersTable.id, usersTable.name, usersTable.email)
-      .execute();
+    const [{ count: total }] = await countQuery.execute();
 
     const papers = await baseQuery
       .orderBy(desc(papersTable.createdAt))
@@ -326,6 +298,25 @@ export class PapersController {
     const { id: paperId } = z
       .object({ id: z.preprocess((v) => Number(v), z.number()) })
       .parse(req.params);
+
+    // Verify the paper belongs to the authenticated user before updating
+    const [existingPaper] = await db
+      .select()
+      .from(papersTable)
+      .where(eq(papersTable.id, paperId));
+
+    if (!existingPaper) {
+      return res.status(404).json({
+        error: "Paper not found",
+      });
+    }
+
+    if (!req.admin && existingPaper.userId !== req.user!.id) {
+      return res.status(403).json({
+        error: "You don't have permission to update this paper",
+      });
+    }
+
     const updatePayload: Record<keyof UpdatePaper, any> = {
       title: undefined,
       notes: undefined,
@@ -334,6 +325,9 @@ export class PapersController {
       categoryId: undefined,
       ipfsCid: undefined,
       ipfsUrl: undefined,
+      rejectionReason: undefined,
+      reviewedBy: undefined,
+      status: undefined,
     };
 
     if (body.title) {
@@ -367,7 +361,37 @@ export class PapersController {
       updatePayload["notes"] = body.notes;
     }
 
+    if (body.status) {
+      if (!req.admin) {
+        return res.status(403).json({
+          error: "Only admins can update the status of a paper.",
+        });
+      }
+
+      if (body.status === "rejected" && !body.rejectionReason) {
+        return res.status(400).json({
+          error:
+            "[rejectionReason] is required to update the status of a paper to 'rejected'",
+        });
+      }
+      const reviewedBy =
+        body.status === "published" || body.status === "rejected"
+          ? req.admin.id
+          : null;
+
+      updatePayload["status"] = body.status;
+      updatePayload["reviewedBy"] = reviewedBy;
+      updatePayload["rejectionReason"] =
+        body.status === "rejected" ? body.rejectionReason : null;
+    }
+
     if (req.file) {
+      if (!req.admin) {
+        return res.status(403).json({
+          error:
+            "Only admins can change a paper's PDF. Contact admin@desci.ng to change this paper's PDF",
+        });
+      }
       const fileBlob = new Blob([fs.readFileSync(req.file.path)]);
 
       const ipfsResponse = await ipfsService.uploadFile(
@@ -379,24 +403,9 @@ export class PapersController {
       updatePayload["ipfsCid"] = ipfsResponse.cid;
       updatePayload["ipfsUrl"] =
         `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`;
-    }
 
-    // Verify the paper belongs to the authenticated user before updating
-    const [existingPaper] = await db
-      .select()
-      .from(papersTable)
-      .where(eq(papersTable.id, paperId));
-
-    if (!existingPaper) {
-      return res.status(404).json({
-        error: "Paper not found",
-      });
-    }
-
-    if (existingPaper.userId !== req.user!.id) {
-      return res.status(403).json({
-        error: "You don't have permission to update this paper",
-      });
+      // delete the previous file by CID
+      await ipfsService.deleteFilesByCid([existingPaper.ipfsCid]);
     }
 
     // Update paper in DB
@@ -405,6 +414,8 @@ export class PapersController {
       .set(updatePayload)
       .where(eq(papersTable.id, paperId))
       .returning();
+
+    console.log({ updatedPaper });
 
     return res.status(200).json(updatedPaper);
   }
@@ -463,7 +474,7 @@ export class PapersController {
     // no-op
   }
 
-  async updatePaperStatus(req: AuthenticatedAdminRequest, res: Response) {
+  async updatePaperStatus(req: AuthenticatedRequest, res: Response) {
     if (!req.admin) {
       return res.status(401).json({
         status: "error",
@@ -491,9 +502,7 @@ export class PapersController {
 
     if (status === "rejected" && !rejectionReason) {
       return res.status(400).json({
-        errors: {
-          rejectionReason: "Rejection reason is required",
-        },
+        error: "[rejectionReason] is required",
       });
     }
 

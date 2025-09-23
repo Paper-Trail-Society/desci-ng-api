@@ -1,11 +1,7 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { auth } from "../../utils/auth";
 import { fromNodeHeaders } from "better-auth/node";
-
-export interface AuthenticatedRequest extends Request {
-  user?: typeof auth.$Infer.Session.user;
-  session?: typeof auth.$Infer.Session.session;
-}
+import { AuthenticatedRequest } from "../../types";
 
 /**
  * Middleware to protect routes with authentication
@@ -17,6 +13,11 @@ export const requireAuth = async (
   next: NextFunction,
 ) => {
   try {
+    if (req.admin) {
+      next();
+      return;
+    }
+
     const session = await auth.api.getSession({
       headers: fromNodeHeaders(req.headers),
     });
