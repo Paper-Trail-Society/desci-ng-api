@@ -6,14 +6,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const node_1 = require("better-auth/node");
 const cors_1 = __importDefault(require("cors"));
-const drizzle_orm_1 = require("drizzle-orm");
 const express_1 = __importDefault(require("express"));
 const schema_1 = require("./db/schema");
-const auth_1 = require("./middlewares/auth");
 const route_1 = require("./modules/fields/route");
 const route_2 = require("./modules/keywords/route");
 const route_3 = require("./modules/papers/route");
-const auth_2 = require("./utils/auth");
+const auth_1 = require("./utils/auth");
 const admin_auth_1 = require("./utils/admin-auth");
 const db_1 = require("./utils/db");
 const morgan_1 = __importDefault(require("morgan"));
@@ -37,10 +35,10 @@ app.use((0, cors_1.default)({
 // better-auth requires access to the raw request body to handle authentication requests correctly.
 // Therefore, the better-auth handler must be mounted before any middleware that parses the request body,
 // such as express.json()
-app.all("/auth/{*any}", (0, node_1.toNodeHandler)(auth_2.auth));
+app.all("/auth/{*any}", (0, node_1.toNodeHandler)(auth_1.auth));
 app.all("/admin-auth/{*any}", (0, node_1.toNodeHandler)(admin_auth_1.adminAuth));
 app.get("/user/me", async (req, res) => {
-    const session = await auth_2.auth.api.getSession({
+    const session = await auth_1.auth.api.getSession({
         headers: (0, node_1.fromNodeHeaders)(req.headers),
     });
     if (!session) {
@@ -65,7 +63,7 @@ app.get("/admin/me", async (req, res) => {
 });
 // JWT token endpoint - get a JWT token for authenticated users
 app.get("/user/jwt-token", async (req, res) => {
-    const session = await auth_2.auth.api.getSession({
+    const session = await auth_1.auth.api.getSession({
         headers: (0, node_1.fromNodeHeaders)(req.headers),
     });
     if (!session) {
@@ -99,7 +97,7 @@ app.get("/health", async (req, res) => {
         // Check if request is authenticated
         let isAuthenticated = false;
         try {
-            const session = await auth_2.auth.api.getSession({
+            const session = await auth_1.auth.api.getSession({
                 headers: (0, node_1.fromNodeHeaders)(req.headers),
             });
             if (session) {
@@ -121,38 +119,6 @@ app.get("/health", async (req, res) => {
             status: "unhealthy",
             database: "disconnected",
             authenticated: false,
-        });
-    }
-});
-// Protected endpoint to get current user's papers
-app.get("/papers/my", auth_1.requireAuth, async (req, res) => {
-    try {
-        const userId = req.user.id;
-        // Fetch all papers belonging to the authenticated user
-        const userPapers = await db_1.db
-            .select()
-            .from(schema_1.papersTable)
-            .where((0, drizzle_orm_1.eq)(schema_1.papersTable.userId, userId));
-        res.json({
-            status: "success",
-            papers: userPapers.map((paper) => ({
-                id: paper.id,
-                title: paper.title,
-                abstract: paper.abstract,
-                ipfsCid: paper.ipfsCid,
-                ipfsUrl: paper.ipfsUrl,
-                createdAt: paper.createdAt,
-                updatedAt: paper.updatedAt,
-            })),
-            count: userPapers.length,
-        });
-    }
-    catch (error) {
-        console.error("Failed to fetch user papers:", error);
-        res.status(500).json({
-            status: "error",
-            message: "Failed to retrieve your papers",
-            error: error instanceof Error ? error.message : String(error),
         });
     }
 });
