@@ -6,6 +6,7 @@ import { db } from "./db";
 import { emailService } from "./email";
 
 export const auth = betterAuth({
+  appName: "Desci NG",
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
@@ -37,7 +38,8 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: process.env.NODE_ENV === "production" ? true : false,
+    requireEmailVerification:
+      process.env.NODE_ENV === "production" ? true : false,
     minPasswordLength: 8,
     maxPasswordLength: 128,
     autoSignIn: true,
@@ -52,7 +54,7 @@ export const auth = betterAuth({
       } catch (error) {
         console.error(
           `Failed to send password reset email to ${user.email}:`,
-          error
+          error,
         );
         throw error;
       }
@@ -75,7 +77,7 @@ export const auth = betterAuth({
       } catch (error) {
         console.error(
           `Failed to send verification email to ${user.email}:`,
-          error
+          error,
         );
         throw error;
       }

@@ -5,6 +5,7 @@ import * as schema from "../db/schema";
 import { db } from "./db";
 
 export const adminAuth = betterAuth({
+  appName: "Desci NG admin",
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
@@ -24,6 +25,7 @@ export const adminAuth = betterAuth({
     minPasswordLength: 8,
     maxPasswordLength: 128,
     autoSignIn: true,
+    disableSignUp: process.env.NODE_ENV === "production" ? true : false,
   },
   plugins: [openAPI(), jwt(), bearer()],
 });
