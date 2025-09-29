@@ -7,7 +7,6 @@ import {
   fetchPapersQueryParams,
   updatePaper,
   getPaperSchema,
-  updatePaperStatusSchema,
 } from "./schema";
 import z from "zod";
 import { requireAuth } from "../../middlewares/auth";
@@ -48,7 +47,7 @@ papersRouter.get(
 papersRouter.get(
   "/papers/:id",
   validateRequest("params", getPaperSchema),
-  async (req, res) => papersController.getPaperById(req, res),
+  async (req, res) => papersController.getPaperByIdOrSlug(req, res),
 );
 
 // need to merge optional admin auth and required user auth middleware for this route
@@ -64,11 +63,3 @@ papersRouter.put(
   validateRequest("body", updatePaper),
   async (req, res) => papersController.update(req, res),
 );
-
-// papersRouter.put(
-//   "/papers/:id/update-status",
-//   adminAuthMiddleware({}),
-//   validateRequest("params", getPaperSchema),
-//   validateRequest("body", updatePaperStatusSchema),
-//   async (req, res) => papersController.updatePaperStatus(req, res),
-// );
