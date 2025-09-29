@@ -150,6 +150,7 @@ export const papersTable = pgTable(
   {
     id: serial("id").primaryKey(),
     title: varchar("title", { length: 255 }).notNull(),
+    slug: varchar("slug", { length: 100 }),
     notes: text("notes").notNull(),
     abstract: text("abstract").notNull(),
     userId: text("user_id")
@@ -172,13 +173,13 @@ export const papersTable = pgTable(
     deletedAt: timestamp("deleted_at"),
   },
   (table) => [
+    index("slug_idx").on(table.slug),
     index("title_idx").on(table.title),
     index("abstract_idx").on(table.abstract),
     index("category_id_idx").on(table.categoryId),
     index("user_id_idx").on(table.userId),
     index("status_idx").on(table.status),
 
-    // index("keywords_gin_idx").using("gin", table.keywords),
     index("search_index").using(
       "gin",
       sql`(
@@ -266,7 +267,7 @@ export type SelectUser = typeof usersTable.$inferSelect;
 export type InsertPaper = typeof papersTable.$inferInsert;
 export type UpdatePaper = Omit<
   InsertPaper,
-  "id" | "createdAt" | "updatedAt" | "deletedAt"
+  "id" | "createdAt" | "updatedAt" | "deletedAt" | "slug"
 >;
 export type SelectPaper = typeof papersTable.$inferSelect;
 
