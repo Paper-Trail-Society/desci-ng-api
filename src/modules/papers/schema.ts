@@ -37,10 +37,5 @@ export const updatePaper = z.object({
 });
 
 export const getPaperSchema = z.object({
-  id: z.preprocess((v) => Number(v), z.number()),
-});
-
-export const updatePaperStatusSchema = z.object({
-  status: z.enum(["pending", "published", "rejected"]),
-  rejectionReason: z.string().optional(),
+  id: z.string(),
 });

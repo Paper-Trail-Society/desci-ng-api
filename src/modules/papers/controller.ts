@@ -4,7 +4,6 @@ import {
   fetchPapersQueryParams,
   getPaperSchema,
   updatePaper,
-  updatePaperStatusSchema,
   uploadPaper,
 } from "./schema";
 import { ipfsService } from "../../utils/ipfs";
@@ -18,7 +17,7 @@ import {
   papersTable,
   usersTable,
 } from "../../db/schema";
-import { desc, eq, sql, count as drizzleCount, inArray } from "drizzle-orm";
+import { desc, eq, sql, count as drizzleCount, inArray, or } from "drizzle-orm";
 import z from "zod";
 import { AuthenticatedRequest, MulterRequest } from "types";
 import slug from "slug";
@@ -147,6 +146,7 @@ export class PapersController {
       .select({
         id: papersTable.id,
         title: papersTable.title,
+        slug: papersTable.slug,
         abstract: papersTable.abstract,
         status: papersTable.status,
         notes: papersTable.notes,
@@ -398,7 +398,7 @@ export class PapersController {
     return res.status(200).json(updatedPaper);
   }
 
-  async getPaperById(req: Request, res: Response) {
+  async getPaperByIdOrSlug(req: Request, res: Response) {
     const { id: paperId } = getPaperSchema.parse(req.params);
 
     const [paper] = await db
@@ -434,7 +434,12 @@ export class PapersController {
         keywordsTable,
         eq(keywordsTable.id, paperKeywordsTable.keywordId),
       )
-      .where(eq(papersTable.id, paperId))
+      .where(
+        or(
+          eq(papersTable.id, parseInt(paperId, 10) || 0),
+          eq(papersTable.slug, paperId),
+        ),
+      )
       .groupBy(papersTable.id, usersTable.id, usersTable.name, usersTable.email)
       .limit(1)
       .execute();
@@ -450,50 +455,5 @@ export class PapersController {
 
   async delete(req: Request, res: Response) {
     // no-op
-  }
-
-  async updatePaperStatus(req: AuthenticatedRequest, res: Response) {
-    if (!req.admin) {
-      return res.status(401).json({
-        status: "error",
-        message: "Admin authentication required. Please sign in to continue.",
-      });
-    }
-
-    const { id: paperId } = getPaperSchema.parse(req.params);
-
-    const [existingPaper] = await db
-      .select()
-      .from(papersTable)
-      .where(eq(papersTable.id, paperId));
-
-    if (!existingPaper) {
-      return res.status(404).json({
-        error: "Paper not found",
-      });
-    }
-
-    // update paper status pased on payload
-    const { status, rejectionReason } = updatePaperStatusSchema.parse(req.body);
-    const reviewedBy =
-      status === "published" || status === "rejected" ? req.admin.id : null;
-
-    if (status === "rejected" && !rejectionReason) {
-      return res.status(400).json({
-        error: "[rejectionReason] is required",
-      });
-    }
-
-    const [updatedPaper] = await db
-      .update(papersTable)
-      .set({
-        status,
-        reviewedBy,
-        rejectionReason: status === "rejected" ? rejectionReason : null,
-      })
-      .where(eq(papersTable.id, paperId))
-      .returning();
-
-    return res.status(200).json(updatedPaper);
   }
 }
