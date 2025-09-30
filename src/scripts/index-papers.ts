@@ -10,6 +10,7 @@ import {
 } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { ipfsService } from "../utils/ipfs";
+import slug from "slug";
 
 type CsvObjectType = {
   author: string;
@@ -92,6 +93,7 @@ const indexPaper = async (row: CsvObjectType) => {
 
   const paperCreationPayload = {
     title: row.paper_name.trim(),
+    slug: slug(row.paper_name.trim().substring(0, 100)),
     abstract: row.abstract,
     notes: row.note,
     categoryId: category.id,
