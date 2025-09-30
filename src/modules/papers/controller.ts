@@ -21,6 +21,7 @@ import {
 import { desc, eq, sql, count as drizzleCount, inArray } from "drizzle-orm";
 import z from "zod";
 import { AuthenticatedRequest, MulterRequest } from "types";
+import slug from "slug";
 
 export class PapersController {
   async create(req: MulterRequest, res: Response) {
@@ -39,21 +40,6 @@ export class PapersController {
       mimetype: file.mimetype,
       path: file.path,
     });
-
-    // {
-    //     ipfsResponse: {
-    //       id: '0198c2b9-41cc-7743-aa32-63e44fb60ddc',
-    //       name: 'Complete Computer Science Self-Learning Path with Resources.pdf',
-    //       size: 370188,
-    //       mime_type: 'application/pdf',
-    //       cid: 'bafybeidezwnftflonhxsffi7so4nzqtgdmovrm2v7wzxm4kql7scumjiai',
-    //       network: 'public',
-    //       number_of_files: 1,
-    //       streamable: false,
-    //       created_at: '2025-08-19T14:26:19.273Z',
-    //       updated_at: '2025-08-19T14:26:19.273Z'
-    //     }
-    //   }
 
     const userId = req.user!.id; // Use authenticated user's ID
 
@@ -106,11 +92,12 @@ export class PapersController {
     );
 
     const createdPaper = await db.transaction(async (tx) => {
-      // Create paper in DB
+      const paperSlug = slug(body.title.substring(0, 100));
       const [newPaper] = await tx
         .insert(papersTable)
         .values({
           title: body.title,
+          slug: paperSlug,
           abstract: body.abstract,
           categoryId: body.categoryId,
           notes: body.notes,
@@ -123,7 +110,6 @@ export class PapersController {
 
       const existingKeywordAttachments = [];
 
-      // map keywords to the paper
       for (const keywordId of keywordIdsToMapToPaper) {
         try {
           await tx
@@ -134,9 +120,8 @@ export class PapersController {
             })
             .returning();
         } catch (error: any) {
-          // check if the error is a unique constraint error in Drizzle oRM
+          // check if the error is a unique constraint exception. See 23505 https://www.postgresql.org/docs/current/errcodes-appendix.html
           if (error.code === "23505") {
-            // PostgreSQL unique violation error code
             console.error(
               "Unique constraint violation: This keyword attachment already exists.",
             );
@@ -145,13 +130,6 @@ export class PapersController {
         }
       }
 
-      // if (existingKeywordAttachments.length > 0) {
-      //   return res.status(400).json({
-      //     error: `Keyword attachments already exist for the following keyword IDs: ${existingKeywordAttachments.join(
-      //       ", ",
-      //     )}`,
-      //   });
-      // }
       return newPaper;
     });
 
