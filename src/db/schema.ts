@@ -150,7 +150,7 @@ export const papersTable = pgTable(
   {
     id: serial("id").primaryKey(),
     title: varchar("title", { length: 255 }).notNull(),
-    slug: varchar("slug", { length: 100 }),
+    slug: varchar("slug", { length: 100 }).notNull(),
     notes: text("notes").notNull(),
     abstract: text("abstract").notNull(),
     userId: text("user_id")

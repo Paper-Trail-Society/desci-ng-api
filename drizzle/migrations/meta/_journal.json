@@ -43,6 +43,13 @@
       "when": 1759163059270,
       "tag": "0005_romantic_wallflower",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1759244280989,
+      "tag": "0006_next_speed_demon",
+      "breakpoints": true
     }
   ]
 }
