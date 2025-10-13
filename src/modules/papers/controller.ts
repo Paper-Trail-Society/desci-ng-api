@@ -60,9 +60,9 @@ export class PapersController {
       });
     }
 
-    const keywordIdsToMapToPaper: number[] = [
-      ...keywordIdsInDB.map(({ id }) => id),
-    ];
+    const keywordIdsToMapToPaper: Set<number> = new Set(
+      keywordIdsInDB.map(({ id }) => id),
+    );
 
     for (const keyword of body.newKeywords) {
       const existingKeyword = await db
@@ -78,9 +78,9 @@ export class PapersController {
             name: keyword.trim(),
           })
           .returning({ id: keywordsTable.id });
-        keywordIdsToMapToPaper.push(keywordId);
+        keywordIdsToMapToPaper.add(keywordId);
       } else {
-        keywordIdsToMapToPaper.push(existingKeyword[0].id);
+        keywordIdsToMapToPaper.add(existingKeyword[0].id);
       }
     }
 
@@ -109,6 +109,8 @@ export class PapersController {
 
       const existingKeywordAttachments = [];
 
+      console.log({ keywordIdsToMapToPaper });
+
       for (const keywordId of keywordIdsToMapToPaper) {
         try {
           await tx
@@ -129,6 +131,7 @@ export class PapersController {
         }
       }
 
+      console.log({ existingKeywordAttachments });
       return newPaper;
     });
 
