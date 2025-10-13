@@ -109,8 +109,6 @@ export class PapersController {
 
       const existingKeywordAttachments = [];
 
-      console.log({ keywordIdsToMapToPaper });
-
       for (const keywordId of keywordIdsToMapToPaper) {
         try {
           await tx
@@ -123,7 +121,7 @@ export class PapersController {
         } catch (error: any) {
           // check if the error is a unique constraint exception. See 23505 https://www.postgresql.org/docs/current/errcodes-appendix.html
           if (error.code === "23505") {
-            console.error(
+            console.log(
               "Unique constraint violation: This keyword attachment already exists.",
             );
             existingKeywordAttachments.push(keywordId);
@@ -131,7 +129,6 @@ export class PapersController {
         }
       }
 
-      console.log({ existingKeywordAttachments });
       return newPaper;
     });
 
