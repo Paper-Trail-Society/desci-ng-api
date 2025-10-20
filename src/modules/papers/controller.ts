@@ -17,10 +17,19 @@ import {
   papersTable,
   usersTable,
 } from "../../db/schema";
-import { desc, eq, sql, count as drizzleCount, inArray, or } from "drizzle-orm";
+import {
+  desc,
+  eq,
+  sql,
+  count as drizzleCount,
+  inArray,
+  or,
+  and,
+} from "drizzle-orm";
 import z from "zod";
 import { AuthenticatedRequest, MulterRequest } from "types";
 import slug from "slug";
+import { createKeyword } from "modules/keywords/service";
 
 export class PapersController {
   async create(req: MulterRequest, res: Response) {
@@ -277,7 +286,6 @@ export class PapersController {
       .object({ id: z.preprocess((v) => Number(v), z.number()) })
       .parse(req.params);
 
-    // Verify the paper belongs to the authenticated user before updating
     const [existingPaper] = await db
       .select()
       .from(papersTable)
@@ -367,7 +375,7 @@ export class PapersController {
       if (!req.admin) {
         return res.status(403).json({
           error:
-            "Only admins can change a paper's PDF. Contact admin@desci.ng to change this paper's PDF",
+            "Only admins can change a paper's PDF. Contact info.descing@gmail.com to change this paper's PDF",
         });
       }
       const fileBlob = new Blob([fs.readFileSync(req.file.path)]);
@@ -384,6 +392,108 @@ export class PapersController {
 
       // delete the previous file by CID
       await ipfsService.deleteFilesByCid([existingPaper.ipfsCid]);
+    }
+
+    // unattach the keyword IDs in the body.removedKeywords from the paper
+    if (body.removedKeywords && body.removedKeywords.length > 0) {
+      const keywordIdsToRemove = body.removedKeywords;
+
+      await db.transaction(async (tx) => {
+        for (const keywordId of keywordIdsToRemove) {
+          try {
+            await tx
+              .delete(paperKeywordsTable)
+              .where(
+                and(
+                  eq(paperKeywordsTable.paperId, paperId),
+                  eq(paperKeywordsTable.keywordId, keywordId),
+                ),
+              );
+          } catch (error) {
+            console.error(
+              `Failed to remove keyword ID ${keywordId} from paper:`,
+              error,
+            );
+          }
+        }
+      });
+    }
+
+    if (body.addedKeywords) {
+      const keywordIdsToAdd = new Set<number>(body.addedKeywords);
+
+      await db.transaction(async (tx) => {
+        for (const keywordId of keywordIdsToAdd) {
+          const existingKeyword = await db
+            .select({ id: keywordsTable.id })
+            .from(keywordsTable)
+            .where(eq(keywordsTable.id, keywordId))
+            .execute();
+
+          // Skip the keyword if it does not exist in the database
+          if (existingKeyword.length === 0) {
+            continue;
+          }
+
+          try {
+            await tx
+              .insert(paperKeywordsTable)
+              .values({
+                paperId,
+                keywordId,
+              })
+              .returning();
+          } catch (error: any) {
+            // check if the error is a unique constraint exception. See 23505 https://www.postgresql.org/docs/current/errcodes-appendix.html
+            if (error.code === "23505") {
+              console.log(
+                "Unique constraint violation: This keyword attachment already exists.",
+              );
+            }
+          }
+        }
+      });
+    }
+
+    if (body.newKeywords) {
+      const keywordIdsToMapToPaper: Set<number> = new Set();
+
+      for (const keyword of body.newKeywords) {
+        const existingKeyword = await db
+          .select({ id: keywordsTable.id })
+          .from(keywordsTable)
+          .where(eq(keywordsTable.name, keyword.trim()))
+          .execute();
+
+        if (existingKeyword.length === 0) {
+          const { id: keywordId } = await createKeyword(keyword);
+          keywordIdsToMapToPaper.add(keywordId);
+        } else {
+          keywordIdsToMapToPaper.add(existingKeyword[0].id);
+        }
+      }
+
+      // Attach the new keywords to the paper
+      await db.transaction(async (tx) => {
+        for (const keywordId of keywordIdsToMapToPaper) {
+          try {
+            await tx
+              .insert(paperKeywordsTable)
+              .values({
+                paperId,
+                keywordId,
+              })
+              .returning();
+          } catch (error: any) {
+            // check if the error is a unique constraint exception. See 23505 https://www.postgresql.org/docs/current/errcodes-appendix.html
+            if (error.code === "23505") {
+              console.log(
+                "Unique constraint violation: This keyword attachment already exists.",
+              );
+            }
+          }
+        }
+      });
     }
 
     // Update paper in DB
@@ -413,6 +523,15 @@ export class PapersController {
         createdAt: papersTable.createdAt,
         updatedAt: papersTable.updatedAt,
         categoryId: papersTable.categoryId,
+        category: {
+          id: categoriesTable.id,
+          name: categoriesTable.name,
+          fieldId: categoriesTable.fieldId,
+        },
+        field: {
+          id: fieldsTable.id,
+          name: fieldsTable.name,
+        },
         user: {
           id: usersTable.id,
           name: usersTable.name,
@@ -426,6 +545,11 @@ export class PapersController {
       })
       .from(papersTable)
       .innerJoin(usersTable, eq(papersTable.userId, usersTable.id))
+      .innerJoin(
+        categoriesTable,
+        eq(categoriesTable.id, papersTable.categoryId),
+      )
+      .innerJoin(fieldsTable, eq(fieldsTable.id, categoriesTable.fieldId))
       .leftJoin(
         paperKeywordsTable,
         eq(papersTable.id, paperKeywordsTable.paperId),
@@ -436,11 +560,18 @@ export class PapersController {
       )
       .where(
         or(
-          eq(papersTable.id, parseInt(paperId, 10) || 0),
+          eq(papersTable.id, parseInt(paperId, 10)),
           eq(papersTable.slug, paperId),
         ),
       )
-      .groupBy(papersTable.id, usersTable.id, usersTable.name, usersTable.email)
+      .groupBy(
+        papersTable.id,
+        usersTable.id,
+        usersTable.name,
+        usersTable.email,
+        categoriesTable.id,
+        fieldsTable.id,
+      )
       .limit(1)
       .execute();
 

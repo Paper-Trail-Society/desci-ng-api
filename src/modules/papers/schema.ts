@@ -30,10 +30,12 @@ export const updatePaper = z.object({
   title: z.string().optional(),
   abstract: z.string().optional(),
   categoryId: z.preprocess((v) => Number(v), z.number()).optional(),
-  keywords: z.array(z.string()).optional(),
   notes: z.string().optional(),
   status: z.enum(["pending", "published", "rejected"]).optional(),
   rejectionReason: z.string().optional(),
+  addedKeywords: z.array(z.number()).optional(),
+  removedKeywords: z.array(z.number()).optional(),
+  newKeywords: z.array(z.string()).optional(),
 });
 
 export const getPaperSchema = z.object({
