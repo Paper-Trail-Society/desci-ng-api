@@ -4,6 +4,7 @@ import { db } from "../../utils/db";
 import { desc, sql } from "drizzle-orm";
 
 export class KeywordController {
+  // TODO: add support for adding the paper count for each keyword to the SQL query and method response
   async index(req: Request, res: Response) {
     const { query } = req.query;
 
