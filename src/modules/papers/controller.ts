@@ -585,6 +585,31 @@ export class PapersController {
   }
 
   async delete(req: Request, res: Response) {
-    // no-op
+    const { id: paperId } = z
+      .object({ id: z.preprocess((v) => Number(v), z.number()) })
+      .parse(req.params);
+
+    const [existingPaper] = await db
+      .select()
+      .from(papersTable)
+      .where(eq(papersTable.id, paperId));
+
+    if (!existingPaper) {
+      return res.status(404).json({
+        error: "Paper not found",
+      });
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(paperKeywordsTable)
+        .where(eq(paperKeywordsTable.paperId, paperId));
+
+      await tx.delete(papersTable).where(eq(papersTable.id, paperId));
+    });
+
+    return res
+      .status(200)
+      .json({ message: `'${existingPaper.title}' paper deleted successfully` });
   }
 }

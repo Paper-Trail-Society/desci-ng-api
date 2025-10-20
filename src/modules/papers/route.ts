@@ -63,3 +63,13 @@ papersRouter.put(
   validateRequest("body", updatePaper),
   async (req, res) => papersController.update(req, res),
 );
+
+papersRouter.delete(
+  "/papers/:id",
+  requireAuth,
+  validateRequest(
+    "params",
+    z.object({ id: z.preprocess((v) => Number(v), z.number()) }),
+  ),
+  async (req, res) => papersController.delete(req, res),
+);
