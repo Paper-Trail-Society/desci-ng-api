@@ -29,7 +29,7 @@ import {
 import z from "zod";
 import { AuthenticatedRequest, MulterRequest } from "types";
 import slug from "slug";
-import { createKeyword } from "modules/keywords/service";
+import { createKeyword } from "../../modules/keywords/service";
 
 export class PapersController {
   async create(req: MulterRequest, res: Response) {
@@ -194,14 +194,14 @@ export class PapersController {
       .$dynamic();
 
     const DEFAULT_VIEWABLE_PAPER_STATUS = "published";
-    if (!req.admin) {
+    if (!req.user) {
       baseQuery = baseQuery.where(
         eq(papersTable.status, DEFAULT_VIEWABLE_PAPER_STATUS),
       );
       countQuery = countQuery.where(
         eq(papersTable.status, DEFAULT_VIEWABLE_PAPER_STATUS),
       );
-    } else if (status && req.admin) {
+    } else if (status && req.user) {
       baseQuery = baseQuery.where(eq(papersTable.status, status));
       countQuery = countQuery.where(eq(papersTable.status, status));
     }
