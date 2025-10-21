@@ -1,6 +1,5 @@
-import { keywordsTable } from "db/schema";
-import { eq } from "drizzle-orm";
-import { db } from "utils/db";
+import { keywordsTable } from "../../db/schema";
+import { db } from "../../utils/db";
 
 export const createKeyword = async (keywordName: string) => {
   const [keyword] = await db
