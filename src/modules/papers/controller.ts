@@ -29,7 +29,7 @@ import {
 import z from "zod";
 import { AuthenticatedRequest, MulterRequest } from "types";
 import slug from "slug";
-import { createKeyword } from "modules/keywords/service";
+import { createKeyword } from "../../modules/keywords/service";
 
 export class PapersController {
   async create(req: MulterRequest, res: Response) {
