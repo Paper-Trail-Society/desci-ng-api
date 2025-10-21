@@ -4,6 +4,7 @@ import {
   index,
   integer,
   jsonb,
+  pgSchema,
   pgTable,
   serial,
   text,
@@ -12,7 +13,9 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-export const adminsTable = pgTable("admins", {
+const desciSchema = pgSchema("desci");
+
+export const adminsTable = desciSchema.table("admins", {
   id: text("id").primaryKey(),
   name: varchar("name").notNull(),
   email: varchar("email").notNull().unique(),
@@ -27,7 +30,7 @@ export const adminsTable = pgTable("admins", {
     .notNull(),
 });
 
-export const adminSessionsTable = pgTable("admin_sessions", {
+export const adminSessionsTable = desciSchema.table("admin_sessions", {
   id: text("id").primaryKey(),
   expiresAt: timestamp("expires_at").notNull(),
   token: text("token").notNull().unique(),
@@ -40,7 +43,7 @@ export const adminSessionsTable = pgTable("admin_sessions", {
     .references(() => adminsTable.id, { onDelete: "cascade" }),
 });
 
-export const adminAccountsTable = pgTable("admin_accounts", {
+export const adminAccountsTable = desciSchema.table("admin_accounts", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
@@ -58,20 +61,23 @@ export const adminAccountsTable = pgTable("admin_accounts", {
   updatedAt: timestamp("updated_at").notNull(),
 });
 
-export const adminVerificationsTable = pgTable("admin_verifications", {
-  id: text("id").primaryKey(),
-  identifier: text("identifier").notNull(),
-  value: text("value").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").$defaultFn(
-    () => /* @__PURE__ */ new Date(),
-  ),
-  updatedAt: timestamp("updated_at").$defaultFn(
-    () => /* @__PURE__ */ new Date(),
-  ),
-});
+export const adminVerificationsTable = desciSchema.table(
+  "admin_verifications",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").$defaultFn(
+      () => /* @__PURE__ */ new Date(),
+    ),
+    updatedAt: timestamp("updated_at").$defaultFn(
+      () => /* @__PURE__ */ new Date(),
+    ),
+  },
+);
 
-export const adminJwksTable = pgTable("admin_jwks", {
+export const adminJwksTable = desciSchema.table("admin_jwks", {
   id: text("id").primaryKey(),
   publicKey: text("public_key").notNull(),
   privateKey: text("private_key").notNull(),
@@ -80,7 +86,7 @@ export const adminJwksTable = pgTable("admin_jwks", {
     .notNull(),
 });
 
-export const usersTable = pgTable("users", {
+export const usersTable = desciSchema.table("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   age: integer("age"),
@@ -101,7 +107,7 @@ export const usersTable = pgTable("users", {
     .notNull(),
 });
 
-export const sessionsTable = pgTable("session", {
+export const sessionsTable = desciSchema.table("session", {
   id: text("id").primaryKey(),
   expiresAt: timestamp("expires_at").notNull(),
   token: text("token").notNull().unique(),
@@ -114,7 +120,7 @@ export const sessionsTable = pgTable("session", {
     .references(() => usersTable.id, { onDelete: "cascade" }),
 });
 
-export const accountsTable = pgTable("account", {
+export const accountsTable = desciSchema.table("account", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
@@ -132,7 +138,7 @@ export const accountsTable = pgTable("account", {
   updatedAt: timestamp("updated_at").notNull(),
 });
 
-export const verificationsTable = pgTable("verification", {
+export const verificationsTable = desciSchema.table("verification", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
@@ -145,7 +151,7 @@ export const verificationsTable = pgTable("verification", {
   ),
 });
 
-export const papersTable = pgTable(
+export const papersTable = desciSchema.table(
   "papers",
   {
     id: serial("id").primaryKey(),
@@ -190,7 +196,7 @@ export const papersTable = pgTable(
   ],
 );
 
-export const paperKeywordsTable = pgTable(
+export const paperKeywordsTable = desciSchema.table(
   "paper_keywords",
   {
     id: serial("id").primaryKey(),
@@ -206,7 +212,7 @@ export const paperKeywordsTable = pgTable(
   ],
 );
 
-export const keywordsTable = pgTable(
+export const keywordsTable = desciSchema.table(
   "keywords",
   {
     id: serial("id").primaryKey(),
@@ -228,12 +234,12 @@ export const keywordsTable = pgTable(
   ],
 );
 
-export const fieldsTable = pgTable("fields", {
+export const fieldsTable = desciSchema.table("fields", {
   id: serial("id").primaryKey(),
   name: varchar("name").notNull(),
 });
 
-export const categoriesTable = pgTable("categories", {
+export const categoriesTable = desciSchema.table("categories", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   fieldId: integer("field_id")
@@ -241,7 +247,7 @@ export const categoriesTable = pgTable("categories", {
     .references(() => fieldsTable.id, { onDelete: "cascade" }),
 });
 
-export const institutionsTable = pgTable("institutions", {
+export const institutionsTable = desciSchema.table("institutions", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull().unique(),
   createdAt: timestamp("created_at")
@@ -252,7 +258,7 @@ export const institutionsTable = pgTable("institutions", {
     .notNull(),
 });
 
-export const jwksTable = pgTable("jwks", {
+export const jwksTable = desciSchema.table("jwks", {
   id: text("id").primaryKey(),
   publicKey: text("public_key").notNull(),
   privateKey: text("private_key").notNull(),
