@@ -560,7 +560,10 @@ export class PapersController {
       )
       .where(
         or(
-          eq(papersTable.id, Number.isNaN(paperId) ? parseInt(paperId, 10) : 0),
+          eq(
+            papersTable.id,
+            !isNaN(parseInt(paperId, 10)) ? parseInt(paperId, 10) : 0,
+          ),
           eq(papersTable.slug, paperId),
         ),
       )
