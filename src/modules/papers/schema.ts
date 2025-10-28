@@ -3,7 +3,6 @@ import z from "zod";
 export const uploadPaper = z.object({
   title: z.string(),
   abstract: z.string(),
-  fieldId: z.preprocess((v) => Number(v), z.number()),
   categoryId: z.preprocess((v) => Number(v), z.number()),
   keywords: z.array(z.preprocess((v) => Number(v), z.number())).optional(),
   newKeywords: z.array(z.string()).optional().default([]),

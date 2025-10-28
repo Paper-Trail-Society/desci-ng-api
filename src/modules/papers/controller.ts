@@ -25,6 +25,7 @@ import {
   inArray,
   or,
   and,
+  SQL,
 } from "drizzle-orm";
 import z from "zod";
 import { AuthenticatedRequest, MulterRequest } from "types";
@@ -50,6 +51,18 @@ export class PapersController {
     });
 
     const userId = req.user!.id; // Use authenticated user's ID
+
+    const existingCategory = await db
+      .select({ id: categoriesTable.id })
+      .from(categoriesTable)
+      .where(eq(categoriesTable.id, body.categoryId))
+      .execute();
+
+    if (existingCategory.length === 0) {
+      return res.status(400).json({
+        error: `Invalid category ID: ${body.categoryId}`,
+      });
+    }
 
     // get the ID of all keywords matching the keyword IDs in body.keywords with an SQL IN query
     const keywordIdsInDB = await db
@@ -149,128 +162,115 @@ export class PapersController {
       fetchPapersQueryParams.parse(req.query);
 
     const offset = (page - 1) * size;
+    const limit = size;
 
-    // Maybe add field ID to the returned fields depending on UI requirements
-    let baseQuery = db
-      .select({
-        id: papersTable.id,
-        title: papersTable.title,
-        slug: papersTable.slug,
-        abstract: papersTable.abstract,
-        status: papersTable.status,
-        notes: papersTable.notes,
-        ipfsCid: papersTable.ipfsCid,
-        ipfsUrl: papersTable.ipfsUrl,
-        userId: papersTable.userId,
-        createdAt: papersTable.createdAt,
-        updatedAt: papersTable.updatedAt,
-        categoryId: papersTable.categoryId,
-        user: {
-          id: usersTable.id,
-          name: usersTable.name,
-          email: usersTable.email,
-        },
-        keywords: sql<any>`COALESCE(json_agg(json_build_object(
-          'id', ${keywordsTable.id},
-          'name', ${keywordsTable.name},
-          'aliases', ${keywordsTable.aliases}
-        )) FILTER (WHERE ${keywordsTable.id} IS NOT NULL), '[]')`,
-      })
-      .from(papersTable)
-      .innerJoin(usersTable, eq(papersTable.userId, usersTable.id))
-      .leftJoin(
-        paperKeywordsTable,
-        eq(papersTable.id, paperKeywordsTable.paperId),
-      )
-      .leftJoin(
-        keywordsTable,
-        eq(keywordsTable.id, paperKeywordsTable.keywordId),
-      )
-      .$dynamic();
+    let conditions: SQL<string>[] = [];
+    let baseQuery = sql`
+              SELECT
+                papers.id,
+                papers.title,
+                papers.slug,
+                papers.abstract,
+                papers.status,
+                papers.notes,
+                papers.ipfs_cid AS "ipfsCid",
+                papers.ipfs_url AS "ipfsUrl",
+                papers.user_id AS "userId",
+                papers.created_at AS "createdAt",
+                papers.updated_at AS "updatedAt",
+                papers.category_id AS "categoryId",
+                json_build_object('id', users.id, 'name', users.name, 'email', users.email) AS user,
+                json_agg(json_build_object('id', keywords.id, 'name', keywords.name, 'aliases', keywords.aliases)) FILTER (WHERE keywords.id IS NOT NULL) AS keywords
+              FROM desci.papers as papers
+              INNER JOIN desci.users as users ON papers.user_id = users.id
+              LEFT JOIN desci.paper_keywords as paper_keywords ON papers.id = paper_keywords.paper_id
+              LEFT JOIN desci.keywords as keywords ON keywords.id = paper_keywords.keyword_id
+          `;
 
-    let countQuery = db
-      .select({ count: drizzleCount(papersTable.id) })
-      .from(papersTable)
-      .$dynamic();
-
-    const DEFAULT_VIEWABLE_PAPER_STATUS = "published";
-    if (!req.user) {
-      baseQuery = baseQuery.where(
-        eq(papersTable.status, DEFAULT_VIEWABLE_PAPER_STATUS),
-      );
-      countQuery = countQuery.where(
-        eq(papersTable.status, DEFAULT_VIEWABLE_PAPER_STATUS),
-      );
-    } else if (status && req.user) {
-      baseQuery = baseQuery.where(eq(papersTable.status, status));
-      countQuery = countQuery.where(eq(papersTable.status, status));
+    // Add fieldId join if needed
+    if (fieldId) {
+      baseQuery = sql`
+              ${baseQuery}
+              INNER JOIN categories ON papers.category_id = categories.id
+              INNER JOIN fields ON categories.field_id = fields.id
+            `;
+      conditions.push(sql`fields.id = ${fieldId}`);
     }
 
     if (userId) {
-      baseQuery = baseQuery.where(eq(papersTable.userId, userId));
-      countQuery = countQuery.where(eq(papersTable.userId, userId));
-    }
-
-    if (fieldId) {
-      baseQuery = baseQuery
-        .innerJoin(
-          categoriesTable,
-          eq(papersTable.categoryId, categoriesTable.id),
-        )
-        .innerJoin(fieldsTable, eq(categoriesTable.fieldId, fieldsTable.id))
-        .where(eq(fieldsTable.id, fieldId));
-
-      countQuery = countQuery
-        .innerJoin(
-          categoriesTable,
-          eq(papersTable.categoryId, categoriesTable.id),
-        )
-        .innerJoin(fieldsTable, eq(categoriesTable.fieldId, fieldsTable.id))
-        .where(eq(fieldsTable.id, fieldId));
+      conditions.push(sql`papers.user_id = ${userId}`);
     }
 
     if (categoryId) {
-      baseQuery = baseQuery.where(eq(papersTable.categoryId, categoryId));
-      countQuery = countQuery.where(eq(papersTable.categoryId, categoryId));
+      conditions.push(sql`papers.category_id = ${categoryId}`);
     }
 
     if (search) {
-      // TODO: Use full-text search + fuzzy matching
-      baseQuery = baseQuery.where(sql`(
-        ${papersTable.title} ILIKE ${`%${search}%`} OR
-        ${papersTable.abstract} ILIKE ${`%${search}%`}
-      )`);
-
-      countQuery = countQuery.where(sql`(
-        ${papersTable.title} ILIKE ${`%${search}%`} OR
-        ${papersTable.abstract} ILIKE ${`%${search}%`}
-      )`);
+      conditions.push(sql`(
+              papers.title ILIKE ${"%" + search + "%"} OR
+              papers.abstract ILIKE ${"%" + search + "%"}
+            )`);
     }
 
-    const [{ count: total }] = await countQuery.execute();
+    const DEFAULT_VIEWABLE_PAPER_STATUS = "published";
+    if (!req.user && !req.admin) {
+      conditions.push(sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`);
+    } else if (status) {
+      conditions.push(sql`papers.status = ${status}`);
+    }
 
-    const papers = await baseQuery
-      .orderBy(desc(papersTable.createdAt))
-      .groupBy(papersTable.id, usersTable.id, usersTable.name, usersTable.email)
-      .offset(offset)
-      .limit(size)
-      .execute();
+    // Build final query with conditions
+    let finalQuery = baseQuery;
+    if (conditions.length) {
+      finalQuery = sql`${finalQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
+    }
+
+    finalQuery = sql`
+            ${finalQuery}
+            GROUP BY papers.id, users.id
+            ORDER BY papers.created_at DESC
+            LIMIT ${limit}
+            OFFSET ${offset}
+          `;
+
+    // Count query with same conditions
+    let countQuery = sql`
+            SELECT COUNT(DISTINCT papers.id) as total
+            FROM desci.papers as papers
+          `;
+
+    if (fieldId) {
+      countQuery = sql`
+              ${countQuery}
+              INNER JOIN desci.categories ON papers.category_id = categories.id
+              INNER JOIN desci.fields ON categories.field_id = fields.id
+            `;
+    }
+
+    if (conditions.length) {
+      countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
+    }
+
+    const papersResults = await db.execute(finalQuery);
+    const [{ total }] = await db.execute(countQuery);
 
     const nextPageUrl =
-      total > size
-        ? `/papers?page=${page + 1}&size=${size}&categoryId=${
-            categoryId ?? ""
-          }&fieldId=${fieldId ?? ""}&search=${encodeURIComponent(search ?? "")}`
+      (total as number) > offset + size
+        ? `/papers?page=${page + 1}&size=${size}` +
+          `${categoryId ? `&categoryId=${categoryId}` : ""}` +
+          `${fieldId ? `&fieldId=${fieldId}` : ""}` +
+          `${search ? `&search=${encodeURIComponent(search)}` : ""}`
         : null;
     const prevPageUrl =
-      page - 1 > 0
-        ? `/papers?page=${page - 1}&size=${size}&categoryId=${
-            categoryId ?? ""
-          }&fieldId=${fieldId ?? ""}&search=${search ?? ""}`
+      page > 1
+        ? `/papers?page=${page - 1}&size=${size}` +
+          `${categoryId ? `&categoryId=${categoryId}` : ""}` +
+          `${fieldId ? `&fieldId=${fieldId}` : ""}` +
+          `${search ? `&search=${search}` : ""}`
         : null;
 
     const response = {
-      data: papers,
+      data: papersResults,
       next_page: nextPageUrl,
       prev_page: prevPageUrl,
       total,
@@ -503,8 +503,6 @@ export class PapersController {
       .where(eq(papersTable.id, paperId))
       .returning();
 
-    console.log({ updatedPaper });
-
     return res.status(200).json(updatedPaper);
   }
 
@@ -587,7 +585,7 @@ export class PapersController {
     return res.status(200).json(paper);
   }
 
-  async delete(req: Request, res: Response) {
+  async delete(req: AuthenticatedRequest, res: Response) {
     const { id: paperId } = z
       .object({ id: z.preprocess((v) => Number(v), z.number()) })
       .parse(req.params);
@@ -603,6 +601,11 @@ export class PapersController {
       });
     }
 
+    // TODO: Allow admins to delete papers
+    if (existingPaper.userId != req.user!.id) {
+      return res.status(404).json({ error: "Paper not found" });
+    }
+
     await db.transaction(async (tx) => {
       await tx
         .delete(paperKeywordsTable)
@@ -610,6 +613,12 @@ export class PapersController {
 
       await tx.delete(papersTable).where(eq(papersTable.id, paperId));
     });
+
+    const ipfsFile = await ipfsService.getFileByCid(existingPaper.ipfsCid);
+
+    if (ipfsFile) {
+      const ipfsResponse = await ipfsService.deleteFilesByCid([ipfsFile.id]);
+    }
 
     return res
       .status(200)
