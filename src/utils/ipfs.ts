@@ -18,9 +18,14 @@ class IpfsService {
     return response;
   }
 
-  async deleteFilesByCid(cids: string[]) {
-    const response = await this.pinata.files.public.delete(cids);
+  async deleteFilesByCid(ids: string[]) {
+    const response = await this.pinata.files.public.delete(ids);
     return response;
+  }
+
+  async getFileByCid(cid: string) {
+    const { files } = await this.pinata.files.public.list().cid(cid);
+    return files.length > 0 ? files[0] : null;
   }
 }
 
