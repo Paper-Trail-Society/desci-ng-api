@@ -161,11 +161,9 @@ app.get("/institutions", async (_req: Request, res: Response) => {
   }
 });
 
-// if (process.env.NETLIFY !== "true" && process.env.NODE_ENV !== "production") {
 app.listen(port, () => {
   console.log(`DeSci API listening on port ${port}`);
 });
-// }
 
 module.exports = app;
 module.exports.default = app;

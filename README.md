@@ -3,7 +3,7 @@
 Decentralized Science Platform API built with Express and PostgreSQL.
 
 ## Requirements
-- Nodejs v20+
+- Nodejs v22+
 - Docker (https://www.docker.com)
 
 ## Quick Start

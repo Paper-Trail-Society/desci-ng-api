@@ -6,7 +6,6 @@ import {
   updatePaper,
   uploadPaper,
 } from "./schema";
-import { ipfsService } from "../../utils/ipfs";
 import { db } from "../../utils/db";
 import {
   UpdatePaper,
@@ -31,6 +30,7 @@ import z from "zod";
 import { AuthenticatedRequest, MulterRequest } from "types";
 import slug from "slug";
 import { createKeyword } from "../../modules/keywords/service";
+import { ipfsService } from "../../utils/ipfs";
 
 export class PapersController {
   async create(req: MulterRequest, res: Response) {
@@ -185,15 +185,11 @@ export class PapersController {
               INNER JOIN desci.users as users ON papers.user_id = users.id
               LEFT JOIN desci.paper_keywords as paper_keywords ON papers.id = paper_keywords.paper_id
               LEFT JOIN desci.keywords as keywords ON keywords.id = paper_keywords.keyword_id
+              INNER JOIN desci.categories ON papers.category_id = desci.categories.id
+              INNER JOIN desci.fields ON categories.field_id = desci.fields.id
           `;
 
-    // Add fieldId join if needed
     if (fieldId) {
-      baseQuery = sql`
-              ${baseQuery}
-              INNER JOIN categories ON papers.category_id = categories.id
-              INNER JOIN fields ON categories.field_id = fields.id
-            `;
       conditions.push(sql`fields.id = ${fieldId}`);
     }
 
@@ -207,8 +203,10 @@ export class PapersController {
 
     if (search) {
       conditions.push(sql`(
-              papers.title ILIKE ${"%" + search + "%"} OR
-              papers.abstract ILIKE ${"%" + search + "%"}
+              papers.title ILIKE ${"%" + search.toLowerCase() + "%"} OR
+              papers.abstract ILIKE ${"%" + search.toLowerCase() + "%"} OR
+              desci.fields.name ILIKE ${"%" + search.toLowerCase() + "%"} OR
+              desci.categories.name ILIKE ${"%" + search.toLowerCase() + "%"}
             )`);
     }
 
@@ -237,22 +235,20 @@ export class PapersController {
     let countQuery = sql`
             SELECT COUNT(DISTINCT papers.id) as total
             FROM desci.papers as papers
+            INNER JOIN desci.categories ON papers.category_id = desci.categories.id
+            INNER JOIN desci.fields ON desci.categories.field_id = desci.fields.id
           `;
-
-    if (fieldId) {
-      countQuery = sql`
-              ${countQuery}
-              INNER JOIN desci.categories ON papers.category_id = categories.id
-              INNER JOIN desci.fields ON categories.field_id = fields.id
-            `;
-    }
 
     if (conditions.length) {
       countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
     }
 
+    // try {
     const papersResults = await db.execute(finalQuery);
     const [{ total }] = await db.execute(countQuery);
+    // } catch (err) {
+    //   console.log({ err });
+    // }
 
     const nextPageUrl =
       (total as number) > offset + size
