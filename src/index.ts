@@ -172,7 +172,8 @@ export default app;
 process.on("SIGTERM", async () => {
   console.log("SIGTERM received, shutting down gracefully");
   try {
-    // await db.end();
+    // free up DB connections
+    await db.$client.end();
     console.log("Database connection closed");
   } catch (err) {
     console.error("Error closing database connection:", err);
