@@ -2,11 +2,12 @@ import type { Request, Response } from "express";
 import { keywordsTable } from "../../db/schema";
 import { db } from "../../utils/db";
 import { desc, sql } from "drizzle-orm";
+import { getKeywordsQueryParams } from "./schema";
 
 export class KeywordController {
   // TODO: add support for adding the paper count for each keyword to the SQL query and method response
   async index(req: Request, res: Response) {
-    const { query } = req.query;
+    const { query } = getKeywordsQueryParams.parse(req.query);
 
     let keywordsQuery = db
       .select({
@@ -17,10 +18,9 @@ export class KeywordController {
       .from(keywordsTable)
       .$dynamic();
 
-    if (query) {
-      keywordsQuery = keywordsQuery
-        .where(
-          sql`
+    keywordsQuery = keywordsQuery
+      .where(
+        sql`
       ${keywordsTable.name} % ${query}
       OR EXISTS (
         SELECT 1
@@ -28,9 +28,9 @@ export class KeywordController {
         WHERE alias % ${query}
       )
     `,
-        )
-        .orderBy(
-          desc(sql`
+      )
+      .orderBy(
+        desc(sql`
       GREATEST(
         similarity(${keywordsTable.name}, ${query}),
         (
@@ -39,8 +39,7 @@ export class KeywordController {
         )
       )
     `),
-        );
-    }
+      );
 
     const keywords = await keywordsQuery.limit(10);
 
