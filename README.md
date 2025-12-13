@@ -1,6 +1,6 @@
 # DeSci API
 
-Decentralized Science Platform API built with Express and PostgreSQL.
+Decentralized Science Platform API built with TypeScript, Express and PostgreSQL.
 
 ## Requirements
 - Nodejs v22+
@@ -84,8 +84,6 @@ desci/
 ├── dist/              # Compiled output
 ├── drizzle/           # Drizzle ORM configuration
 │   └── migrations/    # Database migrations
-├── netlify/           # Netlify configuration
-│   └── functions/     # Serverless functions
 ├── src/               # Source code
 │   ├── db/            # Database models & connection
 │   └── index.ts       # Main entry point
@@ -99,16 +97,10 @@ desci/
 ### MIGRATIONS
 When you create schema updates, run the drizzle generate command, which creates the tables to be migrated:
 ```bash
-npx drizzle-kit generate
+npm run db:generate
 ```
 
 When that succeeds, run the migration:
 ```bash
-npx drizzle-kit migrate
-```
-
-Push directly to Supabase (pending a production database):
-
-```bash
-npx drizzle-kit push
+npm run db:migrate
 ```
