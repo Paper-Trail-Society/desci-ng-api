@@ -22,6 +22,7 @@ app.use(
       process.env.FRONTEND_URLS || "http://localhost:3000,http://localhost:3001"
     )
       .split(",")
+      .map(s => s.trim())
       .filter(Boolean),
     credentials: true, // Allow cookies and Authorization headers
     allowedHeaders: [
