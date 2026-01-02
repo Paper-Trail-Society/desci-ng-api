@@ -20,7 +20,9 @@ export const validateRequest =
         const formattedErrors = z.treeifyError(err);
         return res.status(400).json(formattedErrors);
       }
-
+      req.log
+        .child({ scope: "validateRequest" })
+        .error(err, "Error validating request");
       next(err); // Pass unknown errors to default error handler
     }
   };
