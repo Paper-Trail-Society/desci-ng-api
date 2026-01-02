@@ -6,7 +6,7 @@ import {
   institutionsTable,
   keywordsTable,
 } from "../db/schema";
-import { db } from "../utils/db";
+import { db } from "../config/db";
 
 const seedFieldsAndCategoriesTable = async () => {
   console.log("Seeding fields and categories tables...");
@@ -112,7 +112,7 @@ const seedFieldsAndCategoriesTable = async () => {
 
     if (categoriesToInsert.length > 0) {
       console.log(
-        `Inserting ${categoriesToInsert.length} categories for field: ${field}`
+        `Inserting ${categoriesToInsert.length} categories for field: ${field}`,
       );
 
       console.log(`Categories to insert for ${field}:`, categories);
@@ -123,7 +123,7 @@ const seedFieldsAndCategoriesTable = async () => {
           categoriesToInsert.map((category) => ({
             name: category,
             fieldId: fieldDoc.id,
-          }))
+          })),
         )
         .returning()
         .execute();
@@ -400,6 +400,6 @@ const seedInstitutions = async () => {
   await seedFieldsAndCategoriesTable();
   await seedInstitutions();
 
-  console.log('Database seeding complete!')
+  console.log("Database seeding complete!");
   process.exit(0);
 })();

@@ -3,8 +3,6 @@ import postgres from "postgres";
 import * as dotenv from "dotenv";
 import { sql } from "drizzle-orm";
 import * as schema from "../db/schema";
-import * as path from "path";
-import * as fs from "fs";
 
 // Load environment variables
 dotenv.config();
@@ -13,8 +11,14 @@ dotenv.config();
  * Check database schema against code
  */
 async function checkSchema() {
-  if (!process.env.DATABASE_URL) {
-    console.error("❌ DATABASE_URL environment variable is not set");
+  if (
+    !process.env.DB_USER ||
+    !process.env.DB_PASS ||
+    !process.env.DB_HOST ||
+    !process.env.DB_NAME ||
+    !process.env.DB_PORT
+  ) {
+    console.error("❌ Database environment variables are not set");
     process.exit(1);
   }
 
@@ -22,7 +26,13 @@ async function checkSchema() {
 
   try {
     // Create postgres client
-    const client = postgres(process.env.DATABASE_URL);
+    const client = postgres("", {
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      port: parseInt(process.env.DB_PORT, 10),
+    });
 
     // Create drizzle instance with schema
     const db = drizzle(client, { schema });
@@ -36,7 +46,7 @@ async function checkSchema() {
       WHERE schemaname = 'public'
     `);
 
-    const existingTables = tableResults.map(row => row.tablename);
+    const existingTables = tableResults.map((row) => row.tablename);
 
     if (existingTables.length === 0) {
       console.log("⚠️ No tables found in the database.");
@@ -46,8 +56,8 @@ async function checkSchema() {
 
     // List tables defined in schema
     const schemaTables = Object.keys(schema)
-      .filter(key => key.endsWith("Table"))
-      .map(key => (schema as any)[key]._.name);
+      .filter((key) => key.endsWith("Table"))
+      .map((key) => (schema as any)[key]._.name);
 
     if (schemaTables.length === 0) {
       console.log("⚠️ No tables defined in the schema.");
@@ -56,18 +66,26 @@ async function checkSchema() {
     }
 
     // Check if all schema tables exist
-    const missingTables = schemaTables.filter(table => !existingTables.includes(table));
-    const extraTables = existingTables.filter(table => !schemaTables.includes(table));
+    const missingTables = schemaTables.filter(
+      (table) => !existingTables.includes(table),
+    );
+    const extraTables = existingTables.filter(
+      (table) => !schemaTables.includes(table),
+    );
 
     if (missingTables.length === 0) {
       console.log("✅ All schema tables exist in the database.");
     } else {
-      console.log(`⚠️ Tables defined in schema but missing from database: ${missingTables.join(", ")}`);
+      console.log(
+        `⚠️ Tables defined in schema but missing from database: ${missingTables.join(", ")}`,
+      );
       console.log("💡 Run 'npm run db:migrate' to create these tables.");
     }
 
     if (extraTables.length > 0) {
-      console.log(`ℹ️ Tables in database but not in schema: ${extraTables.join(", ")}`);
+      console.log(
+        `ℹ️ Tables in database but not in schema: ${extraTables.join(", ")}`,
+      );
     }
 
     // Verify table structure for existing tables
@@ -85,8 +103,10 @@ async function checkSchema() {
         console.log(`📊 ${tableName} has ${columnResults.length} columns:`);
 
         // Display column details
-        columnResults.forEach(col => {
-          console.log(`   - ${col.column_name} (${col.data_type}, ${col.is_nullable === 'YES' ? 'nullable' : 'not null'})`);
+        columnResults.forEach((col) => {
+          console.log(
+            `   - ${col.column_name} (${col.data_type}, ${col.is_nullable === "YES" ? "nullable" : "not null"})`,
+          );
         });
       }
     }

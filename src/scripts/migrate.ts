@@ -32,17 +32,29 @@ function findProjectRoot(): string {
  * Run database migrations
  */
 async function runMigrations() {
-  // Check for database URL
-  if (!process.env.DATABASE_URL) {
-    console.error("❌ DATABASE_URL environment variable is not set");
+  // Check for database credentials
+  if (
+    !process.env.DB_USER ||
+    !process.env.DB_PASS ||
+    !process.env.DB_HOST ||
+    !process.env.DB_NAME ||
+    !process.env.DB_PORT
+  ) {
+    console.error("❌ Database environment variables are not set");
     process.exit(1);
   }
-
   console.log("🔄 Starting database migration...");
 
   try {
     // Create postgres client
-    const migrationClient = postgres(process.env.DATABASE_URL, { max: 1 });
+    const migrationClient = postgres("", {
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      port: parseInt(process.env.DB_PORT, 10),
+      max: 1,
+    });
 
     // Create drizzle instance
     const db = drizzle(migrationClient);
