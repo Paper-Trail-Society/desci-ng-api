@@ -9,20 +9,24 @@ import { keywordRouter } from "./modules/keywords/route";
 import { papersRouter } from "./modules/papers/route";
 import { auth } from "./utils/auth";
 import { adminAuth } from "./utils/admin-auth";
-import { db } from "./utils/db";
-import morgan from "morgan";
+import { db } from "./config/db";
+import errorHandler from "middlewares/error-handler";
+import {logger, httpLogger} from "./config/logger";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(morgan("dev"));
+app.use(httpLogger);
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ extended: true, limit: "100mb" }));
+
 app.use(
   cors({
     origin: (
       process.env.FRONTEND_URLS || "http://localhost:3000,http://localhost:3001"
     )
       .split(",")
-      .map(s => s.trim())
+      .map((s) => s.trim())
       .filter(Boolean),
     credentials: true, // Allow cookies and Authorization headers
     allowedHeaders: [
@@ -92,10 +96,6 @@ app.get("/user/jwt-token", async (req, res) => {
   });
 });
 
-// Increase the payload size limit for JSON and URL-encoded bodies
-app.use(express.json({ limit: "100mb" }));
-app.use(express.urlencoded({ extended: true, limit: "100mb" }));
-
 app.use(papersRouter);
 app.use(fieldRouter);
 app.use(keywordRouter);
@@ -162,8 +162,15 @@ app.get("/institutions", async (_req: Request, res: Response) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`DeSci API listening on port ${port}`);
+// Register error handler middleware
+app.use(errorHandler);
+
+app.listen(port, (error) => {
+  if (error) {
+    logger.error(error, "An error occured while starting API server");
+    process.exit(1);
+  }
+  logger.info(`DeSci API listening on port ${port}`);
 });
 
 module.exports = app;
@@ -171,13 +178,13 @@ module.exports.default = app;
 export default app;
 
 process.on("SIGTERM", async () => {
-  console.log("SIGTERM received, shutting down gracefully");
+  logger.info("SIGTERM received, shutting down gracefully");
   try {
     // free up DB connections
     await db.$client.end();
-    console.log("Database connection closed");
+    logger.info("Database connection closed");
   } catch (err) {
-    console.error("Error closing database connection:", err);
+    logger.error(err, "Error closing database connection:");
   }
   process.exit(0);
 });
