@@ -20,7 +20,7 @@
     "dev": "npx tsx --watch src/index.ts",
     "start": "node dist/index.js",
     "prepare:dev": "npm run build && npm run db:generate && npm run db:migrate && npm run db:seed",
-    "prepare:prod": "npm run build && npm run db:migrate && npm run db:seed",
+    "prepare:prod": "npm run db:migrate && npm run db:seed",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node dist/scripts/migrate.js",
     "index-papers": "node dist/scripts/index-papers.js",
