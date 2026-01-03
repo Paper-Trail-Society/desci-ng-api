@@ -1,6 +1,6 @@
-import { logger } from "config/logger";
 import { Logger } from "pino";
 import { SendMailClient } from "zeptomail";
+import { logger } from "../../config/logger";
 
 interface EmailConfig {
   zeptoMailToken: string;

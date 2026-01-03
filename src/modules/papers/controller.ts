@@ -16,17 +16,9 @@ import {
   papersTable,
   usersTable,
 } from "../../db/schema";
-import {
-  eq,
-  sql,
-  count as drizzleCount,
-  inArray,
-  or,
-  and,
-  SQL,
-} from "drizzle-orm";
+import { eq, sql, inArray, or, and, SQL } from "drizzle-orm";
 import z from "zod";
-import { AuthenticatedRequest, MulterRequest } from "types";
+import { AuthenticatedRequest, MulterRequest } from "../../types";
 import slug from "slug";
 import { createKeyword } from "../../modules/keywords/service";
 import { ipfsService } from "../../utils/ipfs";

@@ -10,8 +10,8 @@ import { papersRouter } from "./modules/papers/route";
 import { auth } from "./utils/auth";
 import { adminAuth } from "./utils/admin-auth";
 import { db } from "./config/db";
-import errorHandler from "middlewares/error-handler";
-import {logger, httpLogger} from "./config/logger";
+import { logger, httpLogger } from "./config/logger";
+import errorHandler from "./middlewares/error-handler";
 
 const app = express();
 const port = process.env.PORT || 3000;

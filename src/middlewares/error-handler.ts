@@ -1,4 +1,3 @@
-import { logger } from "../config/logger";
 import { NextFunction, Request, Response } from "express";
 
 const errorHandler = (

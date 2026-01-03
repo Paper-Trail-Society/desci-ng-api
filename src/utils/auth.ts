@@ -4,7 +4,7 @@ import { bearer, jwt, openAPI } from "better-auth/plugins";
 import * as schema from "../db/schema";
 import { db } from "../config/db";
 import { emailService } from "./email";
-import { logger } from "config/logger";
+import { logger } from "../config/logger";
 
 export const auth = betterAuth({
   appName: "Desci NG",
