@@ -1,31 +1,35 @@
 FROM node:22-alpine AS base
-
 WORKDIR /app
 
+FROM base AS deps
 COPY package*.json ./
-
-ENV NODE_ENV=production
 
 RUN npm ci
 
-COPY . .
-
-EXPOSE $PORT
-
 FROM base AS development
-
 ENV NODE_ENV=development
 
-RUN npm install --only=development
-
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 CMD ["npm", "run", "dev"]
 
-FROM base AS production
+FROM base AS build
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+RUN npm prune --production
+
+FROM node:22-alpine AS production
+WORKDIR /app
+
+ENV NODE_ENV=production
 
 USER node
 
-COPY --chown=node:node . /app
+COPY --from=build --chown=node:node /app/node_modules ./node_modules
+COPY --from=build --chown=node:node /app/package.json ./package.json
+COPY --from=build --chown=node:node /app/dist ./dist
 
-RUN npm cache clean --force
-
+EXPOSE 3000
 CMD ["npm", "run", "start"]

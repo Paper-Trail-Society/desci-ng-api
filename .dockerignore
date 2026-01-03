@@ -1,4 +1,30 @@
+# Dependencies
 node_modules
+npm-debug.log*
+
+# Build output
+dist
+
+# Secrets and Config
+.env
+.env.*
+!.env.example
+.secrets
+.npmrc
+
+# Version Control
 .git
+.gitignore
+
+# OS/IDE metadata
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+*.swp
+*.bak
+
+# Docker files
 Dockerfile
-compose.yml
+docker-compose.yml
+.dockerignore
