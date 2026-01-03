@@ -23,11 +23,14 @@ RUN npm prune --production
 FROM node:22-alpine AS production
 WORKDIR /app
 
+
+# Ensure user 'node' can write to the uploads directory for file uploads
+RUN mkdir uploads && chown -R node:node uploads
+
 ENV NODE_ENV=production
 
 USER node
 
-COPY --from=build --chown=node:node /app .
 COPY --from=build --chown=node:node /app/package.json ./package.json
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --from=build --chown=node:node /app/drizzle ./drizzle
