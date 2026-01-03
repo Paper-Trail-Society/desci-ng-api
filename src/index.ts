@@ -162,6 +162,14 @@ app.get("/institutions", async (_req: Request, res: Response) => {
   }
 });
 
+// Catch 404 routes
+app.use((req: Request, res: Response) => {
+  res.status(404).json({
+    status: "error",
+    message: "Route not Found",
+  });
+});
+
 // Register error handler middleware
 app.use(errorHandler);
 

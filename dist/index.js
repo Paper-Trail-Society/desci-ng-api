@@ -146,6 +146,12 @@ app.get("/institutions", async (_req, res) => {
         });
     }
 });
+app.use((req, res) => {
+    res.status(404).json({
+        status: "error",
+        message: "Not Found",
+    });
+});
 // Register error handler middleware
 app.use(error_handler_1.default);
 app.listen(port, (error) => {
