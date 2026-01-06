@@ -12,11 +12,15 @@ import { adminAuth } from "./utils/admin-auth";
 import { db } from "./config/db";
 import { logger, httpLogger } from "./config/logger";
 import errorHandler from "./middlewares/error-handler";
+import { requestContextMiddleware } from "./middlewares/request-context";
+import { wideEventMiddleware } from "./middlewares/wide-event";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(httpLogger);
+app.use(requestContextMiddleware);
+app.use(wideEventMiddleware);
 
 app.use(
   cors({

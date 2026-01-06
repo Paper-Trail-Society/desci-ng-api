@@ -2,6 +2,7 @@ import { Response, NextFunction } from "express";
 import { auth } from "../../utils/auth";
 import { fromNodeHeaders } from "better-auth/node";
 import { AuthenticatedRequest } from "../../types";
+import { getRequestContext } from "../../config/request-context";
 
 /**
  * Middleware to protect routes with authentication
@@ -12,6 +13,7 @@ export const requireAuth = async (
   res: Response,
   next: NextFunction,
 ) => {
+  const event = getRequestContext().get("wideEvent");
   try {
     if (req.admin) {
       next();
@@ -32,6 +34,8 @@ export const requireAuth = async (
     // Attach session and user to request for use in route handlers
     req.user = session.user;
     req.session = session.session;
+
+    event.user = session.user;
 
     next();
   } catch (error) {
@@ -74,6 +78,7 @@ export const optionalAuth = async (
 /**
  * Middleware to log authentication details for debugging
  * Useful for troubleshooting authentication issues
+ * @deprecated
  */
 export const authLogger = async (
   req: AuthenticatedRequest,

@@ -23,13 +23,23 @@ import slug from "slug";
 import { createKeyword } from "../../modules/keywords/service";
 import { ipfsService } from "../../utils/ipfs";
 import catchAsync from "../../utils/catch-async";
+import { getRequestContext } from "../../config/request-context";
+import { error } from "console";
 
 export class PapersController {
   async create(req: MulterRequest, res: Response) {
+    const event = getRequestContext().get("wideEvent");
     const body = uploadPaper.parse(req.body);
+
+    event.payload = body;
+
     if (!req.file) {
+      const errorMsg = "No PDF file uploaded";
+      event.error = {
+        message: errorMsg,
+      };
       return res.status(400).json({
-        error: "No PDF file uploaded",
+        error: errorMsg,
       });
     }
 
@@ -44,8 +54,12 @@ export class PapersController {
       .execute();
 
     if (existingCategory.length === 0) {
+      const errorMsg = `Invalid category ID: ${body.categoryId}`;
+      event.error = {
+        message: errorMsg,
+      };
       return res.status(400).json({
-        error: `Invalid category ID: ${body.categoryId}`,
+        error: errorMsg,
       });
     }
 
@@ -62,8 +76,12 @@ export class PapersController {
     );
 
     if (invalidKeywordIds.length > 0) {
+      const errorMsg = `Invalid keyword IDs: ${invalidKeywordIds.join(", ")}`;
+      event.error = {
+        message: errorMsg,
+      };
       return res.status(400).json({
-        error: `Invalid keyword IDs: ${invalidKeywordIds.join(", ")}`,
+        error: errorMsg,
       });
     }
 
@@ -258,7 +276,11 @@ export class PapersController {
   );
 
   public update = catchAsync(async (req: MulterRequest, res: Response) => {
+    const event = getRequestContext().get("wideEvent");
     const body = updatePaper.parse(req.body);
+
+    event.payload = body;
+
     const { id: paperId } = z
       .object({ id: z.preprocess((v) => Number(v), z.number()) })
       .parse(req.params);
@@ -310,10 +332,12 @@ export class PapersController {
         .execute();
 
       if (!categoryExists) {
+        const errorMsg = "Category does not exist";
+        event.error = {
+          message: errorMsg,
+        };
         return res.status(400).json({
-          errors: {
-            categoryId: "Category does not exist",
-          },
+          error: errorMsg,
         });
       }
 
@@ -326,15 +350,23 @@ export class PapersController {
 
     if (body.status) {
       if (!req.admin) {
+        const errorMsg = "Only admins can update the status of a paper.";
+        event.error = {
+          message: errorMsg,
+        };
         return res.status(403).json({
-          error: "Only admins can update the status of a paper.",
+          error: errorMsg,
         });
       }
 
       if (body.status === "rejected" && !body.rejectionReason) {
+        const errorMsg =
+          "[rejectionReason] is required to update the status of a paper to 'rejected'";
+        event.error = {
+          message: errorMsg,
+        };
         return res.status(400).json({
-          error:
-            "[rejectionReason] is required to update the status of a paper to 'rejected'",
+          error: errorMsg,
         });
       }
       const reviewedBy =
@@ -350,6 +382,11 @@ export class PapersController {
 
     if (req.file) {
       if (!req.admin) {
+        const errorMsg =
+          "Only admins can change a paper's PDF. Contact info.descing@gmail.com to change this paper's PDF";
+        event.error = {
+          message: errorMsg,
+        };
         return res.status(403).json({
           error:
             "Only admins can change a paper's PDF. Contact info.descing@gmail.com to change this paper's PDF",
