@@ -19,11 +19,18 @@ export const logger = pino({
   },
 });
 
-export const httpLogger = pinoHttp({ logger: logger,
+export const httpLogger = pinoHttp({
+  logger: logger,
   redact: {
     paths: ["req.headers.authorization", "req.headers.cookie"],
     remove: true,
   },
+  genReqId: (req, res) => {
+    const id = crypto.randomUUID();
+    res.setHeader("X-Request-Id", id);
+    return id;
+  },
+
   customLogLevel: (_req, res, err) => {
     if (err || res.statusCode >= 500) return "error";
     if (res.statusCode >= 400) return "warn";
