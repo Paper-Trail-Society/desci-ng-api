@@ -1,5 +1,6 @@
 import pino from "pino";
 import pinoHttp from "pino-http";
+import { getRequestContext } from "./request-context";
 
 export const logger = pino({
   level: process.env.LOG_LEVEL || "info",
@@ -30,9 +31,9 @@ export const httpLogger = pinoHttp({
     remove: true,
   },
   genReqId: (req, res) => {
-    const id = crypto.randomUUID();
-    res.setHeader("X-Request-Id", id);
-    return id;
+    const event = getRequestContext().get("wideEvent");
+    res.setHeader("X-Request-Id", event.request_id);
+    return event.request_id;
   },
 
   customLogLevel: (_req, res, err) => {

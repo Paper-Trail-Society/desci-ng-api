@@ -16,11 +16,13 @@ const admin_auth_1 = require("./utils/admin-auth");
 const db_1 = require("./config/db");
 const logger_1 = require("./config/logger");
 const error_handler_1 = __importDefault(require("./middlewares/error-handler"));
+const request_context_1 = require("./middlewares/request-context");
+const wide_event_1 = require("./middlewares/wide-event");
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
+app.use(request_context_1.requestContextMiddleware);
+app.use(wide_event_1.wideEventMiddleware);
 app.use(logger_1.httpLogger);
-app.use(express_1.default.json({ limit: "100mb" }));
-app.use(express_1.default.urlencoded({ extended: true, limit: "100mb" }));
 app.use((0, cors_1.default)({
     origin: (process.env.FRONTEND_URLS || "http://localhost:3000,http://localhost:3001")
         .split(",")
@@ -41,6 +43,8 @@ app.use((0, cors_1.default)({
 // such as express.json()
 app.all("/auth/{*any}", (0, node_1.toNodeHandler)(auth_1.auth));
 app.all("/admin-auth/{*any}", (0, node_1.toNodeHandler)(admin_auth_1.adminAuth));
+app.use(express_1.default.json({ limit: "100mb" }));
+app.use(express_1.default.urlencoded({ extended: true, limit: "100mb" }));
 app.get("/user/me", async (req, res) => {
     const session = await auth_1.auth.api.getSession({
         headers: (0, node_1.fromNodeHeaders)(req.headers),
