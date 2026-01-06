@@ -7,7 +7,6 @@ export const logger = pino({
     service: "desci-ng-api",
     env: process.env.NODE_ENV || "development",
   },
-
   redact: {
     paths: [
       "req.headers.authorization",
@@ -16,6 +15,11 @@ export const logger = pino({
       "token",
     ],
     censor: "[REDACTED]",
+  },
+  formatters: {
+    level: (label) => {
+      return { level: label.toUpperCase() };
+    },
   },
 });
 
