@@ -19,7 +19,7 @@ down:
 restart: down up
 
 logs:
-	docker compose logs -f
+	docker compose logs api -f
 
 ps:
 	docker compose ps
