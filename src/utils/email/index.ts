@@ -1,6 +1,7 @@
 import { Logger } from "pino";
 import { SendMailClient } from "zeptomail";
 import { logger } from "../../config/logger";
+import ApiError from "../api-error";
 
 interface EmailConfig {
   zeptoMailToken: string;
@@ -38,7 +39,7 @@ class EmailService {
       config?.fromName || process.env.ZEPTOMAIL_FROM_NAME || "DeSci NG";
 
     if (!token) {
-      throw new Error(
+      throw new ApiError(
         "ZeptoMail token is required. Please set ZEPTOMAIL_TOKEN environment variable.",
       );
     }
@@ -56,7 +57,7 @@ class EmailService {
     const { to, subject, htmlBody, textBody, replyTo } = options;
 
     if (!htmlBody && !textBody) {
-      throw new Error("Either htmlBody or textBody must be provided");
+      throw new ApiError("Either htmlBody or textBody must be provided");
     }
 
     const recipients = Array.isArray(to) ? to : [to];
@@ -90,7 +91,7 @@ class EmailService {
         error,
         `Failed to send email to ${recipients.join(",")}`,
       );
-      throw new Error(
+      throw new ApiError(
         `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }
