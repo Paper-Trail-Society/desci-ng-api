@@ -34,7 +34,7 @@ papersRouter.post(
   requireAuth,
   upload.single("file"),
   validateRequest("body", uploadPaper),
-  async (req, res) => papersController.create(req, res),
+  papersController.create,
 );
 
 papersRouter.get(

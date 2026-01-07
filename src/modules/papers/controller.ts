@@ -27,7 +27,7 @@ import { getRequestContext } from "../../config/request-context";
 import { error } from "console";
 
 export class PapersController {
-  async create(req: MulterRequest, res: Response) {
+  public create = catchAsync(async (req: MulterRequest, res: Response) => {
     const event = getRequestContext().get("wideEvent");
     const body = uploadPaper.parse(req.body);
 
@@ -156,7 +156,7 @@ export class PapersController {
     });
 
     return res.status(201).json(createdPaper);
-  }
+  });
 
   public index = catchAsync(
     async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
