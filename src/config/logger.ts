@@ -30,11 +30,11 @@ export const httpLogger = pinoHttp({
     paths: ["req.headers.authorization", "req.headers.cookie"],
     remove: true,
   },
-  genReqId: (req, res) => {
-    const event = getRequestContext().get("wideEvent");
-    res.setHeader("X-Request-Id", event.request_id);
-    return event.request_id;
-  },
+  // genReqId: (req, res) => {
+  //   const event = getRequestContext().get("wideEvent");
+  //   res.setHeader("X-Request-Id", event.request_id);
+  //   return event.request_id;
+  // },
 
   customLogLevel: (_req, res, err) => {
     if (err || res.statusCode >= 500) return "error";
