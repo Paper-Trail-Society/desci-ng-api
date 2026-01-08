@@ -8,6 +8,7 @@ export const logger = pino({
   base: {
     service: "desci-ng-api",
     env: process.env.NODE_ENV || "development",
+    channel: "default",
   },
   redact: {
     paths: [
