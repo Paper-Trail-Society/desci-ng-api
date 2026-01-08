@@ -47,7 +47,7 @@ class EmailService {
     // Initialize ZeptoMail client
     const url = "api.zeptomail.com/";
     this.client = new SendMailClient({ url, token });
-    this.logger = logger.child({ module: "email" });
+    this.logger = logger.child({ channel: "email" });
   }
 
   /**
