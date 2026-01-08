@@ -19,8 +19,8 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(requestContextMiddleware);
-app.use(wideEventMiddleware);
 app.use(httpLogger);
+app.use(wideEventMiddleware);
 
 app.use(
   cors({
@@ -169,7 +169,7 @@ app.get("/institutions", async (_req: Request, res: Response) => {
 
 // Catch 404 routes
 app.use((req: Request, res: Response) => {
-  res.status(404).json({
+  return res.status(404).json({
     status: "error",
     message: "Route not Found",
   });

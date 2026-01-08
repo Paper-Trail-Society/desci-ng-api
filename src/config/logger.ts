@@ -1,6 +1,7 @@
 import pino from "pino";
 import pinoHttp from "pino-http";
 import { getRequestContext } from "./request-context";
+import { randomUUID } from "node:crypto";
 
 export const logger = pino({
   level: process.env.LOG_LEVEL || "info",
@@ -25,16 +26,16 @@ export const logger = pino({
 });
 
 export const httpLogger = pinoHttp({
-  logger: logger,
+  logger: logger.child({ channel: "http" }),
   redact: {
     paths: ["req.headers.authorization", "req.headers.cookie"],
     remove: true,
   },
-  // genReqId: (req, res) => {
-  //   const event = getRequestContext().get("wideEvent");
-  //   res.setHeader("X-Request-Id", event.request_id);
-  //   return event.request_id;
-  // },
+  genReqId: (_req, res) => {
+    const requestId = randomUUID();
+    res.setHeader("X-Request-Id", requestId);
+    return requestId;
+  },
 
   customLogLevel: (_req, res, err) => {
     if (err || res.statusCode >= 500) return "error";

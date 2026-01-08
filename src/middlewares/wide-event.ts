@@ -13,7 +13,7 @@ export const wideEventMiddleware = async (
   const startTime = Date.now();
 
   const event: Record<string, unknown> = {
-    request_id: req.headers["x-request-id"]?.toString() ?? randomUUID(),
+    request_id: req.log.bindings().req.id,
     timestamp: new Date().toISOString(),
     method: req.method,
     path: req.path,
