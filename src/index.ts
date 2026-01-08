@@ -201,3 +201,8 @@ process.on("SIGTERM", async () => {
   }
   process.exit(0);
 });
+
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err.message);
+  process.exit(1); // Exit to prevent an unstable state
+});
