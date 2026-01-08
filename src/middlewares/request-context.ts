@@ -8,7 +8,11 @@ export function requestContextMiddleware(
   next: NextFunction,
 ) {
   const context = new Map();
-  requestContext.run(context, () => {
-    next();
+  requestContext.run(context, async () => {
+    try {
+      await next();
+    } catch (err) {
+      next(err);
+    }
   });
 }

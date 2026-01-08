@@ -6,6 +6,7 @@ const errorHandler = (
   res: Response,
   next: NextFunction,
 ) => {
+  res.locals.error = { type: err.name, message: err.message };
   req.log.error(err, "Internal server error");
   return res.status(500).send({
     message: `Internal server error: ${err.message}`,

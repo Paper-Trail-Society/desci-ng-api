@@ -22,13 +22,16 @@ import { AuthenticatedRequest, MulterRequest } from "../../types";
 import slug from "slug";
 import { createKeyword } from "../../modules/keywords/service";
 import { ipfsService } from "../../utils/ipfs";
-import catchAsync from "../../utils/catch-async";
 import { getRequestContext } from "../../config/request-context";
-import { error } from "console";
+import { logger } from "../../config/logger";
 
 export class PapersController {
-  public create = catchAsync(async (req: MulterRequest, res: Response) => {
+  public create = async (req: MulterRequest, res: Response) => {
     const event = getRequestContext().get("wideEvent");
+    logger.trace(
+      { entries: getRequestContext().get("wideEvent") },
+      "getRequestContext called in [PapersController.create]",
+    );
     const body = uploadPaper.parse(req.body);
 
     event.payload = body;
@@ -156,18 +159,21 @@ export class PapersController {
     });
 
     return res.status(201).json(createdPaper);
-  });
+  };
 
-  public index = catchAsync(
-    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const { categoryId, fieldId, userId, search, status, page, size } =
-        fetchPapersQueryParams.parse(req.query);
+  public index = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const { categoryId, fieldId, userId, search, status, page, size } =
+      fetchPapersQueryParams.parse(req.query);
 
-      const offset = (page - 1) * size;
-      const limit = size;
+    const offset = (page - 1) * size;
+    const limit = size;
 
-      let conditions: SQL<string>[] = [];
-      let baseQuery = sql`
+    let conditions: SQL<string>[] = [];
+    let baseQuery = sql`
               SELECT
                 papers.id,
                 papers.title,
@@ -191,41 +197,41 @@ export class PapersController {
               INNER JOIN desci.fields ON categories.field_id = desci.fields.id
           `;
 
-      if (fieldId) {
-        conditions.push(sql`fields.id = ${fieldId}`);
-      }
+    if (fieldId) {
+      conditions.push(sql`fields.id = ${fieldId}`);
+    }
 
-      if (userId) {
-        conditions.push(sql`papers.user_id = ${userId}`);
-      }
+    if (userId) {
+      conditions.push(sql`papers.user_id = ${userId}`);
+    }
 
-      if (categoryId) {
-        conditions.push(sql`papers.category_id = ${categoryId}`);
-      }
+    if (categoryId) {
+      conditions.push(sql`papers.category_id = ${categoryId}`);
+    }
 
-      if (search) {
-        conditions.push(sql`(
+    if (search) {
+      conditions.push(sql`(
               papers.title ILIKE ${"%" + search.toLowerCase() + "%"} OR
               papers.abstract ILIKE ${"%" + search.toLowerCase() + "%"} OR
               desci.fields.name ILIKE ${"%" + search.toLowerCase() + "%"} OR
               desci.categories.name ILIKE ${"%" + search.toLowerCase() + "%"}
             )`);
-      }
+    }
 
-      const DEFAULT_VIEWABLE_PAPER_STATUS = "published";
-      if (!req.user && !req.admin) {
-        conditions.push(sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`);
-      } else if (status) {
-        conditions.push(sql`papers.status = ${status}`);
-      }
+    const DEFAULT_VIEWABLE_PAPER_STATUS = "published";
+    if (!req.user && !req.admin) {
+      conditions.push(sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`);
+    } else if (status) {
+      conditions.push(sql`papers.status = ${status}`);
+    }
 
-      // Build final query with conditions
-      let finalQuery = baseQuery;
-      if (conditions.length) {
-        finalQuery = sql`${finalQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
-      }
+    // Build final query with conditions
+    let finalQuery = baseQuery;
+    if (conditions.length) {
+      finalQuery = sql`${finalQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
+    }
 
-      finalQuery = sql`
+    finalQuery = sql`
             ${finalQuery}
             GROUP BY papers.id, users.id
             ORDER BY papers.created_at DESC
@@ -233,49 +239,48 @@ export class PapersController {
             OFFSET ${offset}
           `;
 
-      // Count query with same conditions
-      let countQuery = sql`
+    // Count query with same conditions
+    let countQuery = sql`
             SELECT COUNT(DISTINCT papers.id) as total
             FROM desci.papers as papers
             INNER JOIN desci.categories ON papers.category_id = desci.categories.id
             INNER JOIN desci.fields ON desci.categories.field_id = desci.fields.id
           `;
 
-      if (conditions.length) {
-        countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
-      }
+    if (conditions.length) {
+      countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
+    }
 
-      const papersResults = await db.execute(finalQuery);
-      const [{ total }] = await db.execute(countQuery);
+    const papersResults = await db.execute(finalQuery);
+    const [{ total }] = await db.execute(countQuery);
 
-      const nextPageUrl =
-        (total as number) > offset + size
-          ? `/papers?page=${page + 1}&size=${size}` +
-            `${categoryId ? `&categoryId=${categoryId}` : ""}` +
-            `${fieldId ? `&fieldId=${fieldId}` : ""}` +
-            `${search ? `&search=${encodeURIComponent(search)}` : ""}`
-          : null;
-      const prevPageUrl =
-        page > 1
-          ? `/papers?page=${page - 1}&size=${size}` +
-            `${categoryId ? `&categoryId=${categoryId}` : ""}` +
-            `${fieldId ? `&fieldId=${fieldId}` : ""}` +
-            `${search ? `&search=${search}` : ""}`
-          : null;
+    const nextPageUrl =
+      (total as number) > offset + size
+        ? `/papers?page=${page + 1}&size=${size}` +
+          `${categoryId ? `&categoryId=${categoryId}` : ""}` +
+          `${fieldId ? `&fieldId=${fieldId}` : ""}` +
+          `${search ? `&search=${encodeURIComponent(search)}` : ""}`
+        : null;
+    const prevPageUrl =
+      page > 1
+        ? `/papers?page=${page - 1}&size=${size}` +
+          `${categoryId ? `&categoryId=${categoryId}` : ""}` +
+          `${fieldId ? `&fieldId=${fieldId}` : ""}` +
+          `${search ? `&search=${search}` : ""}`
+        : null;
 
-      const response = {
-        data: papersResults,
-        next_page: nextPageUrl,
-        prev_page: prevPageUrl,
-        total,
-        size,
-      };
+    const response = {
+      data: papersResults,
+      next_page: nextPageUrl,
+      prev_page: prevPageUrl,
+      total,
+      size,
+    };
 
-      return res.status(200).json(response);
-    },
-  );
+    return res.status(200).json(response);
+  };
 
-  public update = catchAsync(async (req: MulterRequest, res: Response) => {
+  public update = async (req: MulterRequest, res: Response) => {
     const event = getRequestContext().get("wideEvent");
     const body = updatePaper.parse(req.body);
 
@@ -519,128 +524,124 @@ export class PapersController {
       .returning();
 
     return res.status(200).json(updatedPaper);
-  });
+  };
 
-  public getPaperByIdOrSlug = catchAsync(
-    async (req: Request, res: Response) => {
-      const { id: paperId } = getPaperSchema.parse(req.params);
+  public getPaperByIdOrSlug = async (req: Request, res: Response) => {
+    const { id: paperId } = getPaperSchema.parse(req.params);
 
-      const [paper] = await db
-        .select({
-          id: papersTable.id,
-          title: papersTable.title,
-          abstract: papersTable.abstract,
-          notes: papersTable.notes,
-          ipfsCid: papersTable.ipfsCid,
-          ipfsUrl: papersTable.ipfsUrl,
-          userId: papersTable.userId,
-          createdAt: papersTable.createdAt,
-          updatedAt: papersTable.updatedAt,
-          categoryId: papersTable.categoryId,
-          category: {
-            id: categoriesTable.id,
-            name: categoriesTable.name,
-            fieldId: categoriesTable.fieldId,
-          },
-          field: {
-            id: fieldsTable.id,
-            name: fieldsTable.name,
-          },
-          user: {
-            id: usersTable.id,
-            name: usersTable.name,
-            email: usersTable.email,
-          },
-          keywords: sql<any>`COALESCE(json_agg(json_build_object(
+    const [paper] = await db
+      .select({
+        id: papersTable.id,
+        title: papersTable.title,
+        abstract: papersTable.abstract,
+        notes: papersTable.notes,
+        ipfsCid: papersTable.ipfsCid,
+        ipfsUrl: papersTable.ipfsUrl,
+        userId: papersTable.userId,
+        createdAt: papersTable.createdAt,
+        updatedAt: papersTable.updatedAt,
+        categoryId: papersTable.categoryId,
+        category: {
+          id: categoriesTable.id,
+          name: categoriesTable.name,
+          fieldId: categoriesTable.fieldId,
+        },
+        field: {
+          id: fieldsTable.id,
+          name: fieldsTable.name,
+        },
+        user: {
+          id: usersTable.id,
+          name: usersTable.name,
+          email: usersTable.email,
+        },
+        keywords: sql<any>`COALESCE(json_agg(json_build_object(
           'id', ${keywordsTable.id},
           'name', ${keywordsTable.name},
           'aliases', ${keywordsTable.aliases}
         )) FILTER (WHERE ${keywordsTable.id} IS NOT NULL), '[]')`,
-        })
-        .from(papersTable)
-        .innerJoin(usersTable, eq(papersTable.userId, usersTable.id))
-        .innerJoin(
-          categoriesTable,
-          eq(categoriesTable.id, papersTable.categoryId),
-        )
-        .innerJoin(fieldsTable, eq(fieldsTable.id, categoriesTable.fieldId))
-        .leftJoin(
-          paperKeywordsTable,
-          eq(papersTable.id, paperKeywordsTable.paperId),
-        )
-        .leftJoin(
-          keywordsTable,
-          eq(keywordsTable.id, paperKeywordsTable.keywordId),
-        )
-        .where(
-          or(
-            eq(
-              papersTable.id,
-              !isNaN(parseInt(paperId, 10)) ? parseInt(paperId, 10) : 0,
-            ),
-            eq(papersTable.slug, paperId),
+      })
+      .from(papersTable)
+      .innerJoin(usersTable, eq(papersTable.userId, usersTable.id))
+      .innerJoin(
+        categoriesTable,
+        eq(categoriesTable.id, papersTable.categoryId),
+      )
+      .innerJoin(fieldsTable, eq(fieldsTable.id, categoriesTable.fieldId))
+      .leftJoin(
+        paperKeywordsTable,
+        eq(papersTable.id, paperKeywordsTable.paperId),
+      )
+      .leftJoin(
+        keywordsTable,
+        eq(keywordsTable.id, paperKeywordsTable.keywordId),
+      )
+      .where(
+        or(
+          eq(
+            papersTable.id,
+            !isNaN(parseInt(paperId, 10)) ? parseInt(paperId, 10) : 0,
           ),
-        )
-        .groupBy(
-          papersTable.id,
-          usersTable.id,
-          usersTable.name,
-          usersTable.email,
-          categoriesTable.id,
-          fieldsTable.id,
-        )
-        .limit(1)
-        .execute();
+          eq(papersTable.slug, paperId),
+        ),
+      )
+      .groupBy(
+        papersTable.id,
+        usersTable.id,
+        usersTable.name,
+        usersTable.email,
+        categoriesTable.id,
+        fieldsTable.id,
+      )
+      .limit(1)
+      .execute();
 
-      if (!paper) {
-        return res.status(404).json({
-          error: "Paper not found",
-        });
-      }
-
-      return res.status(200).json(paper);
-    },
-  );
-
-  public delete = catchAsync(
-    async (req: AuthenticatedRequest, res: Response) => {
-      const { id: paperId } = z
-        .object({ id: z.preprocess((v) => Number(v), z.number()) })
-        .parse(req.params);
-
-      const [existingPaper] = await db
-        .select()
-        .from(papersTable)
-        .where(eq(papersTable.id, paperId));
-
-      if (!existingPaper) {
-        return res.status(404).json({
-          error: "Paper not found",
-        });
-      }
-
-      // TODO: Allow admins to delete papers
-      if (existingPaper.userId != req.user!.id) {
-        return res.status(404).json({ error: "Paper not found" });
-      }
-
-      await db.transaction(async (tx) => {
-        await tx
-          .delete(paperKeywordsTable)
-          .where(eq(paperKeywordsTable.paperId, paperId));
-
-        await tx.delete(papersTable).where(eq(papersTable.id, paperId));
+    if (!paper) {
+      return res.status(404).json({
+        error: "Paper not found",
       });
+    }
 
-      const ipfsFile = await ipfsService.getFileByCid(existingPaper.ipfsCid);
+    return res.status(200).json(paper);
+  };
 
-      if (ipfsFile) {
-        const ipfsResponse = await ipfsService.deleteFilesByCid([ipfsFile.id]);
-      }
+  public delete = async (req: AuthenticatedRequest, res: Response) => {
+    const { id: paperId } = z
+      .object({ id: z.preprocess((v) => Number(v), z.number()) })
+      .parse(req.params);
 
-      return res.status(200).json({
-        message: `'${existingPaper.title}' paper deleted successfully`,
+    const [existingPaper] = await db
+      .select()
+      .from(papersTable)
+      .where(eq(papersTable.id, paperId));
+
+    if (!existingPaper) {
+      return res.status(404).json({
+        error: "Paper not found",
       });
-    },
-  );
+    }
+
+    // TODO: Allow admins to delete papers
+    if (existingPaper.userId != req.user!.id) {
+      return res.status(404).json({ error: "Paper not found" });
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(paperKeywordsTable)
+        .where(eq(paperKeywordsTable.paperId, paperId));
+
+      await tx.delete(papersTable).where(eq(papersTable.id, paperId));
+    });
+
+    const ipfsFile = await ipfsService.getFileByCid(existingPaper.ipfsCid);
+
+    if (ipfsFile) {
+      const ipfsResponse = await ipfsService.deleteFilesByCid([ipfsFile.id]);
+    }
+
+    return res.status(200).json({
+      message: `'${existingPaper.title}' paper deleted successfully`,
+    });
+  };
 }

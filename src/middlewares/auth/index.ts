@@ -3,6 +3,7 @@ import { auth } from "../../utils/auth";
 import { fromNodeHeaders } from "better-auth/node";
 import { AuthenticatedRequest } from "../../types";
 import { getRequestContext } from "../../config/request-context";
+import { logger } from "../../config/logger";
 
 /**
  * Middleware to protect routes with authentication
@@ -14,6 +15,10 @@ export const requireAuth = async (
   next: NextFunction,
 ) => {
   const event = getRequestContext().get("wideEvent");
+  logger.trace(
+    { entries: getRequestContext().get("wideEvent") },
+    "getRequestContext called in [requireAuth]",
+  );
   try {
     if (req.admin) {
       next();

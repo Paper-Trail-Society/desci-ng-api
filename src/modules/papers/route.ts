@@ -1,4 +1,11 @@
-import { Router } from "express";
+import { AsyncResource } from "node:async_hooks";
+import {
+  NextFunction,
+  Request,
+  RequestHandler,
+  Response,
+  Router,
+} from "express";
 import { PapersController } from "./controller";
 import multer from "multer";
 import { validateRequest } from "../../middlewares/validate-request";
@@ -11,11 +18,29 @@ import {
 import z from "zod";
 import { requireAuth } from "../../middlewares/auth";
 import { adminAuthMiddleware } from "../../middlewares/auth/admin-auth";
+import { getRequestContext } from "../../config/request-context";
 
 export const papersRouter = Router();
 const papersController = new PapersController();
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+/**
+ * Wraps a middleware (e.g., Multer) to propagate AsyncLocalStorage context
+ */
+export const alsMulterWrapper = (
+  middleware: RequestHandler,
+): RequestHandler => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const asyncResource = new AsyncResource("MulterMiddleware");
+
+    // Run the middleware inside the AsyncResource
+    // This preserves the store initialized in the first middleware
+    asyncResource.runInAsyncScope(() => {
+      middleware(req, res, next);
+    });
+  };
+};
 
 const upload = multer({
   dest: "uploads/papers",
@@ -32,7 +57,7 @@ const upload = multer({
 papersRouter.post(
   "/papers",
   requireAuth,
-  upload.single("file"),
+  alsMulterWrapper(upload.single("file")),
   validateRequest("body", uploadPaper),
   papersController.create,
 );
@@ -59,7 +84,7 @@ papersRouter.put(
     "params",
     z.object({ id: z.preprocess((v) => Number(v), z.number()) }),
   ),
-  upload.single("file"),
+  alsMulterWrapper(upload.single("file")),
   validateRequest("body", updatePaper),
   papersController.update,
 );
