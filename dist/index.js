@@ -21,8 +21,8 @@ const wide_event_1 = require("./middlewares/wide-event");
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
 app.use(request_context_1.requestContextMiddleware);
-app.use(wide_event_1.wideEventMiddleware);
 app.use(logger_1.httpLogger);
+app.use(wide_event_1.wideEventMiddleware);
 app.use((0, cors_1.default)({
     origin: (process.env.FRONTEND_URLS || "http://localhost:3000,http://localhost:3001")
         .split(",")
