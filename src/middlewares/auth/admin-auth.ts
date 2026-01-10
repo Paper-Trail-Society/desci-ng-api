@@ -22,6 +22,8 @@ export const adminAuthMiddleware =
         // Attach session and user to request for use in route handlers
         req.admin = session.user;
         req.session = session.session;
+
+        req.ctx.set("admin", session.user);
       }
 
       next();

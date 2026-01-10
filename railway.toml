@@ -1,0 +1,10 @@
+[build]
+builder = "Dockerfile"
+buildCommand = "echo building!"
+
+[deploy]
+preDeployCommand = ["npm run prepare:prod"]
+startCommand = "npm run start"
+healthcheckPath = "/health"
+healthcheckTimeout = 10
+restartPolicyType = "always"

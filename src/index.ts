@@ -9,20 +9,24 @@ import { keywordRouter } from "./modules/keywords/route";
 import { papersRouter } from "./modules/papers/route";
 import { auth } from "./utils/auth";
 import { adminAuth } from "./utils/admin-auth";
-import { db } from "./utils/db";
-import morgan from "morgan";
+import { db } from "./config/db";
+import { logger, httpLogger } from "./config/logger";
+import errorHandler from "./middlewares/error-handler";
+import { wideEventMiddleware } from "./middlewares/wide-event";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(morgan("dev"));
+app.use(httpLogger);
+app.use(wideEventMiddleware);
+
 app.use(
   cors({
     origin: (
       process.env.FRONTEND_URLS || "http://localhost:3000,http://localhost:3001"
     )
       .split(",")
-      .map(s => s.trim())
+      .map((s) => s.trim())
       .filter(Boolean),
     credentials: true, // Allow cookies and Authorization headers
     allowedHeaders: [
@@ -41,6 +45,9 @@ app.use(
 // such as express.json()
 app.all("/auth/{*any}", toNodeHandler(auth));
 app.all("/admin-auth/{*any}", toNodeHandler(adminAuth));
+
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 
 app.get("/user/me", async (req, res) => {
   const session = await auth.api.getSession({
@@ -92,10 +99,6 @@ app.get("/user/jwt-token", async (req, res) => {
   });
 });
 
-// Increase the payload size limit for JSON and URL-encoded bodies
-app.use(express.json({ limit: "100mb" }));
-app.use(express.urlencoded({ extended: true, limit: "100mb" }));
-
 app.use(papersRouter);
 app.use(fieldRouter);
 app.use(keywordRouter);
@@ -129,7 +132,7 @@ app.get("/health", async (req: Request, res: Response) => {
       authenticated: isAuthenticated,
     });
   } catch (error) {
-    console.error("Health check failed:", error);
+    logger.error(error, "Health check failed:");
     res.status(500).json({
       status: "unhealthy",
       database: "disconnected",
@@ -154,7 +157,7 @@ app.get("/institutions", async (_req: Request, res: Response) => {
       institutions,
     });
   } catch (error) {
-    console.error("Get institutions error:", error);
+    logger.error(error, "Get institutions error:");
     res.status(500).json({
       status: "error",
       message: "Failed to fetch institutions",
@@ -162,8 +165,23 @@ app.get("/institutions", async (_req: Request, res: Response) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`DeSci API listening on port ${port}`);
+// Catch 404 routes
+app.use((req: Request, res: Response) => {
+  return res.status(404).json({
+    status: "error",
+    message: "Route not Found",
+  });
+});
+
+// Register error handler middleware
+app.use(errorHandler);
+
+app.listen(port, (error) => {
+  if (error) {
+    logger.error(error, "An error occured while starting API server");
+    process.exit(1);
+  }
+  logger.info(`DeSci API listening on port ${port}`);
 });
 
 module.exports = app;
@@ -171,13 +189,23 @@ module.exports.default = app;
 export default app;
 
 process.on("SIGTERM", async () => {
-  console.log("SIGTERM received, shutting down gracefully");
+  logger.info("SIGTERM received, shutting down gracefully");
   try {
     // free up DB connections
     await db.$client.end();
-    console.log("Database connection closed");
+    logger.info("Database connection closed");
   } catch (err) {
-    console.error("Error closing database connection:", err);
+    logger.error(err, "Error closing database connection:");
   }
   process.exit(0);
+});
+
+process.on("uncaughtException", (err) => {
+  logger.error(`Uncaught Exception: ${err.message}`);
+  process.exit(1); // Exit to prevent an unstable state
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  logger.error(promise, "Unhandled Rejection reason:", reason);
+  process.exit(1);
 });

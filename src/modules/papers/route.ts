@@ -34,20 +34,20 @@ papersRouter.post(
   requireAuth,
   upload.single("file"),
   validateRequest("body", uploadPaper),
-  async (req, res) => papersController.create(req, res),
+  papersController.create,
 );
 
 papersRouter.get(
   "/papers",
   adminAuthMiddleware({ optional: true }),
   validateRequest("query", fetchPapersQueryParams),
-  async (req, res) => papersController.index(req, res),
+  papersController.index,
 );
 
 papersRouter.get(
   "/papers/:id",
   validateRequest("params", getPaperSchema),
-  async (req, res) => papersController.getPaperByIdOrSlug(req, res),
+  papersController.getPaperByIdOrSlug,
 );
 
 // need to merge optional admin auth and required user auth middleware for this route
@@ -61,7 +61,7 @@ papersRouter.put(
   ),
   upload.single("file"),
   validateRequest("body", updatePaper),
-  async (req, res) => papersController.update(req, res),
+  papersController.update,
 );
 
 papersRouter.delete(
@@ -71,5 +71,5 @@ papersRouter.delete(
     "params",
     z.object({ id: z.preprocess((v) => Number(v), z.number()) }),
   ),
-  async (req, res) => papersController.delete(req, res),
+  papersController.delete,
 );

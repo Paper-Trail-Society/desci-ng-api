@@ -1,12 +1,12 @@
 import * as fs from "fs";
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import {
   fetchPapersQueryParams,
   getPaperSchema,
   updatePaper,
   uploadPaper,
 } from "./schema";
-import { db } from "../../utils/db";
+import { db } from "../../config/db";
 import {
   UpdatePaper,
   categoriesTable,
@@ -16,39 +16,30 @@ import {
   papersTable,
   usersTable,
 } from "../../db/schema";
-import {
-  desc,
-  eq,
-  sql,
-  count as drizzleCount,
-  inArray,
-  or,
-  and,
-  SQL,
-} from "drizzle-orm";
+import { eq, sql, inArray, or, and, SQL } from "drizzle-orm";
 import z from "zod";
-import { AuthenticatedRequest, MulterRequest } from "types";
+import { AuthenticatedRequest, MulterRequest } from "../../types";
 import slug from "slug";
 import { createKeyword } from "../../modules/keywords/service";
 import { ipfsService } from "../../utils/ipfs";
 
 export class PapersController {
-  async create(req: MulterRequest, res: Response) {
+  public create = async (req: MulterRequest, res: Response) => {
     const body = uploadPaper.parse(req.body);
+
+    req.ctx.set("payload", body);
+
     if (!req.file) {
+      const errorMsg = "No PDF file uploaded";
+      req.ctx.set("error", {
+        message: errorMsg,
+      });
       return res.status(400).json({
-        error: "No PDF file uploaded",
+        error: errorMsg,
       });
     }
 
     const file = req.file;
-
-    console.log("File details:", {
-      filename: file.originalname,
-      size: file.size,
-      mimetype: file.mimetype,
-      path: file.path,
-    });
 
     const userId = req.user!.id; // Use authenticated user's ID
 
@@ -59,8 +50,12 @@ export class PapersController {
       .execute();
 
     if (existingCategory.length === 0) {
+      const errorMsg = `Invalid category ID: ${body.categoryId}`;
+      req.ctx.set("error", {
+        message: errorMsg,
+      });
       return res.status(400).json({
-        error: `Invalid category ID: ${body.categoryId}`,
+        error: errorMsg,
       });
     }
 
@@ -77,8 +72,12 @@ export class PapersController {
     );
 
     if (invalidKeywordIds.length > 0) {
+      const errorMsg = `Invalid keyword IDs: ${invalidKeywordIds.join(", ")}`;
+      req.ctx.set("error", {
+        message: errorMsg,
+      });
       return res.status(400).json({
-        error: `Invalid keyword IDs: ${invalidKeywordIds.join(", ")}`,
+        error: errorMsg,
       });
     }
 
@@ -129,8 +128,6 @@ export class PapersController {
         })
         .returning();
 
-      const existingKeywordAttachments = [];
-
       for (const keywordId of keywordIdsToMapToPaper) {
         try {
           await tx
@@ -143,21 +140,24 @@ export class PapersController {
         } catch (error: any) {
           // check if the error is a unique constraint exception. See 23505 https://www.postgresql.org/docs/current/errcodes-appendix.html
           if (error.code === "23505") {
-            console.log(
-              "Unique constraint violation: This keyword attachment already exists.",
+            req.log.warn(
+              { paperId: newPaper.id, keywordId },
+              "Unique constraint violation: This is a duplicate keyword attachment",
             );
-            existingKeywordAttachments.push(keywordId);
           }
         }
       }
 
       return newPaper;
     });
-
     return res.status(201).json(createdPaper);
-  }
+  };
 
-  async index(req: AuthenticatedRequest, res: Response) {
+  public index = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+  ) => {
     const { categoryId, fieldId, userId, search, status, page, size } =
       fetchPapersQueryParams.parse(req.query);
 
@@ -243,12 +243,8 @@ export class PapersController {
       countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
     }
 
-    // try {
     const papersResults = await db.execute(finalQuery);
     const [{ total }] = await db.execute(countQuery);
-    // } catch (err) {
-    //   console.log({ err });
-    // }
 
     const nextPageUrl =
       (total as number) > offset + size
@@ -274,10 +270,13 @@ export class PapersController {
     };
 
     return res.status(200).json(response);
-  }
+  };
 
-  async update(req: MulterRequest, res: Response) {
+  public update = async (req: MulterRequest, res: Response) => {
     const body = updatePaper.parse(req.body);
+
+    req.ctx.set("payload", body);
+
     const { id: paperId } = z
       .object({ id: z.preprocess((v) => Number(v), z.number()) })
       .parse(req.params);
@@ -329,10 +328,12 @@ export class PapersController {
         .execute();
 
       if (!categoryExists) {
+        const errorMsg = "Category does not exist";
+        req.ctx.set("error", {
+          message: errorMsg,
+        });
         return res.status(400).json({
-          errors: {
-            categoryId: "Category does not exist",
-          },
+          error: errorMsg,
         });
       }
 
@@ -345,15 +346,23 @@ export class PapersController {
 
     if (body.status) {
       if (!req.admin) {
+        const errorMsg = "Only admins can update the status of a paper.";
+        req.ctx.set("error", {
+          message: errorMsg,
+        });
         return res.status(403).json({
-          error: "Only admins can update the status of a paper.",
+          error: errorMsg,
         });
       }
 
       if (body.status === "rejected" && !body.rejectionReason) {
+        const errorMsg =
+          "[rejectionReason] is required to update the status of a paper to 'rejected'";
+        req.ctx.set("error", {
+          message: errorMsg,
+        });
         return res.status(400).json({
-          error:
-            "[rejectionReason] is required to update the status of a paper to 'rejected'",
+          error: errorMsg,
         });
       }
       const reviewedBy =
@@ -369,6 +378,12 @@ export class PapersController {
 
     if (req.file) {
       if (!req.admin) {
+        const errorMsg =
+          "Only admins can change a paper's PDF. Contact info.descing@gmail.com to change this paper's PDF";
+        req.ctx.set("error", {
+          message: errorMsg,
+        });
+
         return res.status(403).json({
           error:
             "Only admins can change a paper's PDF. Contact info.descing@gmail.com to change this paper's PDF",
@@ -390,7 +405,6 @@ export class PapersController {
       await ipfsService.deleteFilesByCid([existingPaper.ipfsCid]);
     }
 
-    // unattach the keyword IDs in the body.removedKeywords from the paper
     if (body.removedKeywords && body.removedKeywords.length > 0) {
       const keywordIdsToRemove = body.removedKeywords;
 
@@ -406,9 +420,9 @@ export class PapersController {
                 ),
               );
           } catch (error) {
-            console.error(
-              `Failed to remove keyword ID ${keywordId} from paper:`,
+            req.log.error(
               error,
+              `Failed to remove keyword ID ${keywordId} from paper:`,
             );
           }
         }
@@ -442,7 +456,8 @@ export class PapersController {
           } catch (error: any) {
             // check if the error is a unique constraint exception. See 23505 https://www.postgresql.org/docs/current/errcodes-appendix.html
             if (error.code === "23505") {
-              console.log(
+              req.log.error(
+                error,
                 "Unique constraint violation: This keyword attachment already exists.",
               );
             }
@@ -483,7 +498,8 @@ export class PapersController {
           } catch (error: any) {
             // check if the error is a unique constraint exception. See 23505 https://www.postgresql.org/docs/current/errcodes-appendix.html
             if (error.code === "23505") {
-              console.log(
+              req.log.error(
+                error,
                 "Unique constraint violation: This keyword attachment already exists.",
               );
             }
@@ -500,9 +516,9 @@ export class PapersController {
       .returning();
 
     return res.status(200).json(updatedPaper);
-  }
+  };
 
-  async getPaperByIdOrSlug(req: Request, res: Response) {
+  public getPaperByIdOrSlug = async (req: Request, res: Response) => {
     const { id: paperId } = getPaperSchema.parse(req.params);
 
     const [paper] = await db
@@ -579,9 +595,9 @@ export class PapersController {
     }
 
     return res.status(200).json(paper);
-  }
+  };
 
-  async delete(req: AuthenticatedRequest, res: Response) {
+  public delete = async (req: AuthenticatedRequest, res: Response) => {
     const { id: paperId } = z
       .object({ id: z.preprocess((v) => Number(v), z.number()) })
       .parse(req.params);
@@ -616,8 +632,8 @@ export class PapersController {
       const ipfsResponse = await ipfsService.deleteFilesByCid([ipfsFile.id]);
     }
 
-    return res
-      .status(200)
-      .json({ message: `'${existingPaper.title}' paper deleted successfully` });
-  }
+    return res.status(200).json({
+      message: `'${existingPaper.title}' paper deleted successfully`,
+    });
+  };
 }

@@ -2,8 +2,9 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { bearer, jwt, openAPI } from "better-auth/plugins";
 import * as schema from "../db/schema";
-import { db } from "./db";
+import { db } from "../config/db";
 import { emailService } from "./email";
+import { logger } from "../config/logger";
 
 export const auth = betterAuth({
   appName: "Desci NG",
@@ -50,11 +51,11 @@ export const auth = betterAuth({
           userName: user.name || user.email,
           resetUrl: url,
         });
-        console.log(`Password reset email sent to ${user.email}`);
+        logger.info(`Password reset email sent to ${user.email}`);
       } catch (error) {
-        console.error(
-          `Failed to send password reset email to ${user.email}:`,
+        logger.error(
           error,
+          `Failed to send password reset email to ${user.email}:`,
         );
         throw error;
       }
@@ -70,18 +71,29 @@ export const auth = betterAuth({
             userName: user.name || user.email,
             verificationUrl: url,
           });
-          console.log(`Verification email sent to ${user.email}`);
+          logger.info(`Verification email sent to ${user.email}`);
         } else {
-          console.log(`Verification URL for ${user.email}: ${url}`);
+          logger.info(`Verification URL for ${user.email}: ${url}`);
         }
       } catch (error) {
-        console.error(
-          `Failed to send verification email to ${user.email}:`,
+        logger.error(
           error,
+          `Failed to send verification email to ${user.email}:`,
         );
         throw error;
       }
     },
   },
   plugins: [openAPI(), jwt(), bearer()],
+  logger: {
+    level: "info",
+    log: (level, message, ...args) => {
+      logger.child({ channel: "auth" }).info({
+        level,
+        message,
+        metadata: args,
+        timestamp: new Date().toISOString(),
+      });
+    },
+  },
 });

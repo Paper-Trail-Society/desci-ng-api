@@ -1,7 +1,7 @@
 import "dotenv/config";
 import fs from "fs";
 import csv from "csv-parser";
-import { db } from "../utils/db";
+import { db } from "../config/db";
 import {
   categoriesTable,
   institutionsTable,

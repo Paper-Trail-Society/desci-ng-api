@@ -13,14 +13,20 @@ const route_2 = require("./modules/keywords/route");
 const route_3 = require("./modules/papers/route");
 const auth_1 = require("./utils/auth");
 const admin_auth_1 = require("./utils/admin-auth");
-const db_1 = require("./utils/db");
-const morgan_1 = __importDefault(require("morgan"));
+const db_1 = require("./config/db");
+const logger_1 = require("./config/logger");
+const error_handler_1 = __importDefault(require("./middlewares/error-handler"));
+const request_context_1 = require("./middlewares/request-context");
+const wide_event_1 = require("./middlewares/wide-event");
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
-app.use((0, morgan_1.default)("dev"));
+app.use(logger_1.httpLogger);
+app.use(request_context_1.requestContextMiddleware);
+app.use(wide_event_1.wideEventMiddleware);
 app.use((0, cors_1.default)({
     origin: (process.env.FRONTEND_URLS || "http://localhost:3000,http://localhost:3001")
         .split(",")
+        .map((s) => s.trim())
         .filter(Boolean),
     credentials: true, // Allow cookies and Authorization headers
     allowedHeaders: [
@@ -37,6 +43,8 @@ app.use((0, cors_1.default)({
 // such as express.json()
 app.all("/auth/{*any}", (0, node_1.toNodeHandler)(auth_1.auth));
 app.all("/admin-auth/{*any}", (0, node_1.toNodeHandler)(admin_auth_1.adminAuth));
+app.use(express_1.default.json({ limit: "100mb" }));
+app.use(express_1.default.urlencoded({ extended: true, limit: "100mb" }));
 app.get("/user/me", async (req, res) => {
     const session = await auth_1.auth.api.getSession({
         headers: (0, node_1.fromNodeHeaders)(req.headers),
@@ -80,9 +88,6 @@ app.get("/user/jwt-token", async (req, res) => {
         user: session.user,
     });
 });
-// Increase the payload size limit for JSON and URL-encoded bodies
-app.use(express_1.default.json({ limit: "100mb" }));
-app.use(express_1.default.urlencoded({ extended: true, limit: "100mb" }));
 app.use(route_3.papersRouter);
 app.use(route_1.fieldRouter);
 app.use(route_2.keywordRouter);
@@ -145,22 +150,39 @@ app.get("/institutions", async (_req, res) => {
         });
     }
 });
-app.listen(port, () => {
-    console.log(`DeSci API listening on port ${port}`);
+// Catch 404 routes
+app.use((req, res) => {
+    return res.status(404).json({
+        status: "error",
+        message: "Route not Found",
+    });
+});
+// Register error handler middleware
+app.use(error_handler_1.default);
+app.listen(port, (error) => {
+    if (error) {
+        logger_1.logger.error(error, "An error occured while starting API server");
+        process.exit(1);
+    }
+    logger_1.logger.info(`DeSci API listening on port ${port}`);
 });
 module.exports = app;
 module.exports.default = app;
 exports.default = app;
 process.on("SIGTERM", async () => {
-    console.log("SIGTERM received, shutting down gracefully");
+    logger_1.logger.info("SIGTERM received, shutting down gracefully");
     try {
         // free up DB connections
         await db_1.db.$client.end();
-        console.log("Database connection closed");
+        logger_1.logger.info("Database connection closed");
     }
     catch (err) {
-        console.error("Error closing database connection:", err);
+        logger_1.logger.error(err, "Error closing database connection:");
     }
     process.exit(0);
+});
+process.on("uncaughtException", (err) => {
+    console.error("Uncaught Exception:", err.message);
+    process.exit(1); // Exit to prevent an unstable state
 });
 //# sourceMappingURL=index.js.map

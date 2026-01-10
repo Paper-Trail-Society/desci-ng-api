@@ -1,4 +1,7 @@
+import { Logger } from "pino";
 import { SendMailClient } from "zeptomail";
+import { logger } from "../../config/logger";
+import ApiError from "../api-error";
 
 interface EmailConfig {
   zeptoMailToken: string;
@@ -24,6 +27,7 @@ class EmailService {
   private client: any;
   private fromEmail: string;
   private fromName: string;
+  private logger: Logger;
 
   constructor(config?: Partial<EmailConfig>) {
     const token = config?.zeptoMailToken || process.env.ZEPTOMAIL_TOKEN;
@@ -35,7 +39,7 @@ class EmailService {
       config?.fromName || process.env.ZEPTOMAIL_FROM_NAME || "DeSci NG";
 
     if (!token) {
-      throw new Error(
+      throw new ApiError(
         "ZeptoMail token is required. Please set ZEPTOMAIL_TOKEN environment variable.",
       );
     }
@@ -43,6 +47,7 @@ class EmailService {
     // Initialize ZeptoMail client
     const url = "api.zeptomail.com/";
     this.client = new SendMailClient({ url, token });
+    this.logger = logger.child({ channel: "email" });
   }
 
   /**
@@ -52,7 +57,7 @@ class EmailService {
     const { to, subject, htmlBody, textBody, replyTo } = options;
 
     if (!htmlBody && !textBody) {
-      throw new Error("Either htmlBody or textBody must be provided");
+      throw new ApiError("Either htmlBody or textBody must be provided");
     }
 
     const recipients = Array.isArray(to) ? to : [to];
@@ -80,10 +85,13 @@ class EmailService {
         }),
       });
 
-      console.log(`Email sent successfully to: ${recipients.join(", ")}`);
+      this.logger.info(`Email sent successfully to: ${recipients.join(", ")}`);
     } catch (error) {
-      console.error("Failed to send email:", error);
-      throw new Error(
+      this.logger.error(
+        error,
+        `Failed to send email to ${recipients.join(",")}`,
+      );
+      throw new ApiError(
         `Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }

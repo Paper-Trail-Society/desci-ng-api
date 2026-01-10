@@ -3,7 +3,6 @@
 Decentralized Science Platform API built with TypeScript, Express and PostgreSQL.
 
 ## Requirements
-- Nodejs v22+
 - Docker (https://www.docker.com)
 
 ## Quick Start
@@ -13,22 +12,8 @@ Decentralized Science Platform API built with TypeScript, Express and PostgreSQL
 # Add required environment variables
 cp .env.example .env
 
-# Install dependencies
-npm install
-
-# Start docker services
-docker compose up -d
-
-# Prepare database tables for usage
-
-npm run prepare:dev
-
-# Development
-npm run dev
-
-# Build and start production
-npm run build
-npm start
+# Start the API
+make setup
 
 ```
 
@@ -48,9 +33,6 @@ npm run db:migrate
 
 # Check schema against database
 npm run db:check
-
-# View database with GUI
-npm run db:studio
 ```
 
 ## API Endpoints
@@ -65,42 +47,13 @@ npm run db:studio
 - PostgreSQL with Drizzle ORM
 - ESLint and Prettier for code quality
 
-## Scripts
-
-- `npm run dev` - Start dev server with hot reload
-- `npm run prepare:dev` - Prepares database - database generation, migration, and seeding.
-- `npm run prepare:prod` - Prepares database - database migration and seeding, runs before deployment on prod.
-- `npm run build` - Compile TypeScript
-- `npm start` - Run production build
-- `npm run db:generate` - Generate database migrations
-- `npm run db:migrate` - Run database migrations
-- `npm run db:check` - Verify database schema
-- `npm run db:studio` - Open database GUI
-
-## Project Structure
-
-```
-desci/
-├── dist/              # Compiled output
-├── drizzle/           # Drizzle ORM configuration
-│   └── migrations/    # Database migrations
-├── src/               # Source code
-│   ├── db/            # Database models & connection
-│   └── index.ts       # Main entry point
-├── .env               # Environment variables
-├── drizzle.config.ts  # Drizzle configuration
-├── netlify.toml       # Netlify configuration
-├── package.json       # Dependencies & scripts
-└── tsconfig.json      # TypeScript configuration
-```
-
 ### MIGRATIONS
 When you create schema updates, run the drizzle generate command, which creates the tables to be migrated:
 ```bash
-npm run db:generate
+make db-generate
 ```
 
 When that succeeds, run the migration:
 ```bash
-npm run db:migrate
+make db-migrate
 ```

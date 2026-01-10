@@ -1,13 +1,30 @@
 services:
+  api:
+    container_name: desci-ng-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - ./:/app/
+      - /app/node_modules
+    networks:
+      - desci_ng
+    ports:
+      - 8000:8000
+    depends_on:
+      database:
+        condition: service_started
+
   database:
     container_name: desci-ng-postgres
     image: postgres:17
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: desci
+      POSTGRES_USER: '${DB_USER}'
+      POSTGRES_PASSWORD: '${DB_PASS}'
+      POSTGRES_DB: '${DB_NAME}'
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U '${DB_USER}' -q -d '${DB_NAME}'"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -15,6 +32,25 @@ services:
       - desci_db:/var/lib/postgresql/data
     ports:
       - 5423:5432
+    networks:
+      - desci_ng
+
+  mailpit:
+    container_name: desci-ng-mailpit
+    image: axllent/mailpit:latest
+    ports:
+      - '${MAIL_PORT}:1025'  # SMTP port
+      - '8025:8025'  # Web interface port
+    networks:
+      - desci_ng
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8025/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   desci_db:
+
+networks:
+  desci_ng:

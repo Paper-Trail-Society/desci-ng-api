@@ -1,3 +1,5 @@
+CREATE SCHEMA desci;
+
 ALTER TABLE "public"."account" SET SCHEMA "desci";
 --> statement-breakpoint
 ALTER TABLE "public"."admin_accounts" SET SCHEMA "desci";
