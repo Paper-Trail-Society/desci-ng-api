@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
-import { getRequestContext } from "../config/request-context";
 import { logger } from "../config/logger";
 
+const WIDE_EVENT_LOG_ORIGIN = "wide-event-middleware";
 export const wideEventMiddleware = async (
   req: Request,
   res: Response,
@@ -11,6 +11,7 @@ export const wideEventMiddleware = async (
 
   const startTime = Date.now();
 
+  ctx.set("origin", WIDE_EVENT_LOG_ORIGIN);
   ctx.set("request_id", req.log.bindings().req.id);
   ctx.set("timestamp", new Date().toISOString());
   ctx.set("method", req.method);

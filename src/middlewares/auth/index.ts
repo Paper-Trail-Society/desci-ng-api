@@ -2,8 +2,6 @@ import { Response, NextFunction } from "express";
 import { auth } from "../../utils/auth";
 import { fromNodeHeaders } from "better-auth/node";
 import { AuthenticatedRequest } from "../../types";
-import { getRequestContext } from "../../config/request-context";
-import { logger } from "../../config/logger";
 
 /**
  * Middleware to protect routes with authentication

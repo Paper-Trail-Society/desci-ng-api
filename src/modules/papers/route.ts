@@ -1,11 +1,4 @@
-import { AsyncResource } from "node:async_hooks";
-import {
-  NextFunction,
-  Request,
-  RequestHandler,
-  Response,
-  Router,
-} from "express";
+import { Router } from "express";
 import { PapersController } from "./controller";
 import multer from "multer";
 import { validateRequest } from "../../middlewares/validate-request";
@@ -18,7 +11,6 @@ import {
 import z from "zod";
 import { requireAuth } from "../../middlewares/auth";
 import { adminAuthMiddleware } from "../../middlewares/auth/admin-auth";
-import { getRequestContext } from "../../config/request-context";
 
 export const papersRouter = Router();
 const papersController = new PapersController();
