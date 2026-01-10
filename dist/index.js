@@ -16,12 +16,10 @@ const admin_auth_1 = require("./utils/admin-auth");
 const db_1 = require("./config/db");
 const logger_1 = require("./config/logger");
 const error_handler_1 = __importDefault(require("./middlewares/error-handler"));
-const request_context_1 = require("./middlewares/request-context");
 const wide_event_1 = require("./middlewares/wide-event");
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
 app.use(logger_1.httpLogger);
-app.use(request_context_1.requestContextMiddleware);
 app.use(wide_event_1.wideEventMiddleware);
 app.use((0, cors_1.default)({
     origin: (process.env.FRONTEND_URLS || "http://localhost:3000,http://localhost:3001")
@@ -119,7 +117,7 @@ app.get("/health", async (req, res) => {
         });
     }
     catch (error) {
-        console.error("Health check failed:", error);
+        logger_1.logger.error(error, "Health check failed:");
         res.status(500).json({
             status: "unhealthy",
             database: "disconnected",
@@ -143,7 +141,7 @@ app.get("/institutions", async (_req, res) => {
         });
     }
     catch (error) {
-        console.error("Get institutions error:", error);
+        logger_1.logger.error(error, "Get institutions error:");
         res.status(500).json({
             status: "error",
             message: "Failed to fetch institutions",
@@ -182,7 +180,11 @@ process.on("SIGTERM", async () => {
     process.exit(0);
 });
 process.on("uncaughtException", (err) => {
-    console.error("Uncaught Exception:", err.message);
+    logger_1.logger.error(`Uncaught Exception: ${err.message}`);
     process.exit(1); // Exit to prevent an unstable state
+});
+process.on("unhandledRejection", (reason, promise) => {
+    logger_1.logger.error(promise, "Unhandled Rejection reason:", reason);
+    process.exit(1);
 });
 //# sourceMappingURL=index.js.map
