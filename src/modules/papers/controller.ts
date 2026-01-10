@@ -25,8 +25,6 @@ import { ipfsService } from "../../utils/ipfs";
 
 export class PapersController {
   public create = async (req: MulterRequest, res: Response) => {
-    // const ctx = req.ctx;
-
     const body = uploadPaper.parse(req.body);
 
     req.ctx.set("payload", body);
@@ -36,7 +34,6 @@ export class PapersController {
       req.ctx.set("error", {
         message: errorMsg,
       });
-      // req.ctx = ctx;
       return res.status(400).json({
         error: errorMsg,
       });
@@ -57,7 +54,6 @@ export class PapersController {
       req.ctx.set("error", {
         message: errorMsg,
       });
-      // req.ctx = ctx;
       return res.status(400).json({
         error: errorMsg,
       });
@@ -80,7 +76,6 @@ export class PapersController {
       req.ctx.set("error", {
         message: errorMsg,
       });
-      // req.ctx = ctx;
       return res.status(400).json({
         error: errorMsg,
       });
@@ -278,10 +273,9 @@ export class PapersController {
   };
 
   public update = async (req: MulterRequest, res: Response) => {
-    const event = req.ctx.get("wideEvent");
     const body = updatePaper.parse(req.body);
 
-    event.payload = body;
+    req.ctx.set("payload", body);
 
     const { id: paperId } = z
       .object({ id: z.preprocess((v) => Number(v), z.number()) })
@@ -335,10 +329,9 @@ export class PapersController {
 
       if (!categoryExists) {
         const errorMsg = "Category does not exist";
-        event.error = {
+        req.ctx.set("error", {
           message: errorMsg,
-        };
-        req.ctx.set("wideEvent", event);
+        });
         return res.status(400).json({
           error: errorMsg,
         });
@@ -354,10 +347,9 @@ export class PapersController {
     if (body.status) {
       if (!req.admin) {
         const errorMsg = "Only admins can update the status of a paper.";
-        event.error = {
+        req.ctx.set("error", {
           message: errorMsg,
-        };
-        req.ctx.set("wideEvent", event);
+        });
         return res.status(403).json({
           error: errorMsg,
         });
@@ -366,10 +358,9 @@ export class PapersController {
       if (body.status === "rejected" && !body.rejectionReason) {
         const errorMsg =
           "[rejectionReason] is required to update the status of a paper to 'rejected'";
-        event.error = {
+        req.ctx.set("error", {
           message: errorMsg,
-        };
-        req.ctx.set("wideEvent", event);
+        });
         return res.status(400).json({
           error: errorMsg,
         });
@@ -389,10 +380,10 @@ export class PapersController {
       if (!req.admin) {
         const errorMsg =
           "Only admins can change a paper's PDF. Contact info.descing@gmail.com to change this paper's PDF";
-        event.error = {
+        req.ctx.set("error", {
           message: errorMsg,
-        };
-        req.ctx.set("wideEvent", event);
+        });
+
         return res.status(403).json({
           error:
             "Only admins can change a paper's PDF. Contact info.descing@gmail.com to change this paper's PDF",
@@ -524,7 +515,6 @@ export class PapersController {
       .where(eq(papersTable.id, paperId))
       .returning();
 
-    req.ctx.set("wideEvent", event);
     return res.status(200).json(updatedPaper);
   };
 
