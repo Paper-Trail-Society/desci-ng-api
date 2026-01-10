@@ -32,7 +32,7 @@ export const adminAuth = betterAuth({
   logger: {
     level: "info",
     log: (level, message, ...args) => {
-      logger.child({ channel: "admin-auth" }).info({
+      logger.child({ origin: "admin-auth" }).info({
         level,
         message,
         metadata: args,

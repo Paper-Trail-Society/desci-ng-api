@@ -88,7 +88,7 @@ export const auth = betterAuth({
   logger: {
     level: "info",
     log: (level, message, ...args) => {
-      logger.child({ channel: "auth" }).info({
+      logger.child({ origin: "auth" }).info({
         level,
         message,
         metadata: args,
