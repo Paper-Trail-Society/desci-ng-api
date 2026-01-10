@@ -16,6 +16,7 @@ export const wideEventMiddleware = async (
   ctx.set("timestamp", new Date().toISOString());
   ctx.set("method", req.method);
   ctx.set("path", req.path);
+  ctx.set("ip", req.ip);
 
   req.ctx = ctx;
 
