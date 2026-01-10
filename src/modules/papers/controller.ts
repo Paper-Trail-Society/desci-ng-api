@@ -23,9 +23,6 @@ import slug from "slug";
 import { createKeyword } from "../../modules/keywords/service";
 import { ipfsService } from "../../utils/ipfs";
 
-const setContextInFunction = (ctx: Map<any, any>) =>
-  ctx.set("setContextInFunction", "true");
-
 export class PapersController {
   public create = async (req: MulterRequest, res: Response) => {
     // const ctx = req.ctx;
@@ -166,7 +163,6 @@ export class PapersController {
     res: Response,
     next: NextFunction,
   ) => {
-    setContextInFunction(req.ctx);
     const { categoryId, fieldId, userId, search, status, page, size } =
       fetchPapersQueryParams.parse(req.query);
 

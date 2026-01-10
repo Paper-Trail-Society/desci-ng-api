@@ -2,9 +2,8 @@ import pino from "pino";
 import pinoHttp from "pino-http";
 import { randomUUID } from "node:crypto";
 
-export const logger = pino({
-  name: "default",
-  level: process.env.LOG_LEVEL || "trace",
+const baseLogger = pino({
+  level: process.env.LOG_LEVEL || "info",
   base: {
     service: "desci-ng-api",
     env: process.env.NODE_ENV || "development",
@@ -25,9 +24,11 @@ export const logger = pino({
   },
 });
 
+export const logger = baseLogger.child({ channel: "default" });
+
 export const httpLogger = pinoHttp({
   name: "http",
-  logger: logger,
+  logger: baseLogger.child({ channel: "http" }),
   redact: {
     paths: ["req.headers.authorization", "req.headers.cookie"],
     remove: true,
