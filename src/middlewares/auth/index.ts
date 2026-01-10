@@ -14,11 +14,8 @@ export const requireAuth = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const event = getRequestContext().get("wideEvent");
-  logger.trace(
-    { entries: getRequestContext().get("wideEvent") },
-    "getRequestContext called in [requireAuth]",
-  );
+  const ctx = req.ctx;
+
   try {
     if (req.admin) {
       next();
@@ -40,8 +37,9 @@ export const requireAuth = async (
     req.user = session.user;
     req.session = session.session;
 
-    event.user = session.user;
+    ctx.set("user", session.user);
 
+    req.ctx = ctx;
     next();
   } catch (error) {
     console.error("Authentication middleware error:", error);

@@ -20,8 +20,8 @@ const request_context_1 = require("./middlewares/request-context");
 const wide_event_1 = require("./middlewares/wide-event");
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
-app.use(request_context_1.requestContextMiddleware);
 app.use(logger_1.httpLogger);
+app.use(request_context_1.requestContextMiddleware);
 app.use(wide_event_1.wideEventMiddleware);
 app.use((0, cors_1.default)({
     origin: (process.env.FRONTEND_URLS || "http://localhost:3000,http://localhost:3001")
@@ -152,7 +152,7 @@ app.get("/institutions", async (_req, res) => {
 });
 // Catch 404 routes
 app.use((req, res) => {
-    res.status(404).json({
+    return res.status(404).json({
         status: "error",
         message: "Route not Found",
     });
@@ -180,5 +180,9 @@ process.on("SIGTERM", async () => {
         logger_1.logger.error(err, "Error closing database connection:");
     }
     process.exit(0);
+});
+process.on("uncaughtException", (err) => {
+    console.error("Uncaught Exception:", err.message);
+    process.exit(1); // Exit to prevent an unstable state
 });
 //# sourceMappingURL=index.js.map

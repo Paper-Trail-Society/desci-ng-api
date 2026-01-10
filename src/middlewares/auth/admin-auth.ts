@@ -2,12 +2,10 @@ import { Response, NextFunction } from "express";
 import { adminAuth } from "../../utils/admin-auth";
 import { fromNodeHeaders } from "better-auth/node";
 import { AuthenticatedRequest } from "../../types";
-import { getRequestContext } from "../../config/request-context";
 
 export const adminAuthMiddleware =
   ({ optional = false }: { optional?: boolean }) =>
   async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    const event = getRequestContext().get("wideEvent");
     try {
       const session = await adminAuth.api.getSession({
         headers: fromNodeHeaders(req.headers),
@@ -25,7 +23,7 @@ export const adminAuthMiddleware =
         req.admin = session.user;
         req.session = session.session;
 
-        event.admin = session.user;
+        req.ctx.set("admin", session.user);
       }
 
       next();

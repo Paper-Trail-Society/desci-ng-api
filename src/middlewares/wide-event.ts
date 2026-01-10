@@ -7,38 +7,29 @@ export const wideEventMiddleware = async (
   res: Response,
   next: NextFunction,
 ) => {
-  const ctx = getRequestContext();
-  logger.trace(
-    { entries: getRequestContext().get("wideEvent") },
-    "getRequestContext called in [wideEventMiddleware]",
-  );
+  const ctx = new Map();
 
   const startTime = Date.now();
 
-  const event: Record<string, unknown> = {
-    request_id: req.log.bindings().req.id,
-    timestamp: new Date().toISOString(),
-    method: req.method,
-    path: req.path,
-  };
+  ctx.set("request_id", req.log.bindings().req.id);
+  ctx.set("timestamp", new Date().toISOString());
+  ctx.set("method", req.method);
+  ctx.set("path", req.path);
 
-  if (!ctx.get("wideEvent")) {
-    ctx.set("wideEvent", event);
-  }
+  req.ctx = ctx;
 
   // Hook into response finish event
   res.on("finish", () => {
-    event.status_code = res.statusCode;
-    event.outcome = res.statusCode < 400 ? "success" : "error";
-    event.duration_ms = Date.now() - startTime;
+    req.ctx.set("status_code", res.statusCode);
+    req.ctx.set("outcome", res.statusCode < 400 ? "success" : "error");
+    req.ctx.set("duration_ms", Date.now() - startTime);
 
     // Attach any error caught by global error handler
     if ((res as any).locals.error) {
-      event.error = (res as any).locals.error;
+      req.ctx.set("error", (res as any).locals.error);
     }
-
-    logger.info(event);
+    logger.info(Object.fromEntries(ctx));
   });
 
-  await next();
+  next();
 };

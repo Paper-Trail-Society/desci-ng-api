@@ -22,25 +22,24 @@ import { AuthenticatedRequest, MulterRequest } from "../../types";
 import slug from "slug";
 import { createKeyword } from "../../modules/keywords/service";
 import { ipfsService } from "../../utils/ipfs";
-import { getRequestContext } from "../../config/request-context";
-import { logger } from "../../config/logger";
+
+const setContextInFunction = (ctx: Map<any, any>) =>
+  ctx.set("setContextInFunction", "true");
 
 export class PapersController {
   public create = async (req: MulterRequest, res: Response) => {
-    const event = getRequestContext().get("wideEvent");
-    logger.trace(
-      { entries: getRequestContext().get("wideEvent") },
-      "getRequestContext called in [PapersController.create]",
-    );
+    // const ctx = req.ctx;
+
     const body = uploadPaper.parse(req.body);
 
-    event.payload = body;
+    req.ctx.set("payload", body);
 
     if (!req.file) {
       const errorMsg = "No PDF file uploaded";
-      event.error = {
+      req.ctx.set("error", {
         message: errorMsg,
-      };
+      });
+      // req.ctx = ctx;
       return res.status(400).json({
         error: errorMsg,
       });
@@ -58,9 +57,10 @@ export class PapersController {
 
     if (existingCategory.length === 0) {
       const errorMsg = `Invalid category ID: ${body.categoryId}`;
-      event.error = {
+      req.ctx.set("error", {
         message: errorMsg,
-      };
+      });
+      // req.ctx = ctx;
       return res.status(400).json({
         error: errorMsg,
       });
@@ -80,9 +80,10 @@ export class PapersController {
 
     if (invalidKeywordIds.length > 0) {
       const errorMsg = `Invalid keyword IDs: ${invalidKeywordIds.join(", ")}`;
-      event.error = {
+      req.ctx.set("error", {
         message: errorMsg,
-      };
+      });
+      // req.ctx = ctx;
       return res.status(400).json({
         error: errorMsg,
       });
@@ -157,7 +158,6 @@ export class PapersController {
 
       return newPaper;
     });
-
     return res.status(201).json(createdPaper);
   };
 
@@ -166,6 +166,7 @@ export class PapersController {
     res: Response,
     next: NextFunction,
   ) => {
+    setContextInFunction(req.ctx);
     const { categoryId, fieldId, userId, search, status, page, size } =
       fetchPapersQueryParams.parse(req.query);
 
@@ -281,7 +282,7 @@ export class PapersController {
   };
 
   public update = async (req: MulterRequest, res: Response) => {
-    const event = getRequestContext().get("wideEvent");
+    const event = req.ctx.get("wideEvent");
     const body = updatePaper.parse(req.body);
 
     event.payload = body;
@@ -341,6 +342,7 @@ export class PapersController {
         event.error = {
           message: errorMsg,
         };
+        req.ctx.set("wideEvent", event);
         return res.status(400).json({
           error: errorMsg,
         });
@@ -359,6 +361,7 @@ export class PapersController {
         event.error = {
           message: errorMsg,
         };
+        req.ctx.set("wideEvent", event);
         return res.status(403).json({
           error: errorMsg,
         });
@@ -370,6 +373,7 @@ export class PapersController {
         event.error = {
           message: errorMsg,
         };
+        req.ctx.set("wideEvent", event);
         return res.status(400).json({
           error: errorMsg,
         });
@@ -392,6 +396,7 @@ export class PapersController {
         event.error = {
           message: errorMsg,
         };
+        req.ctx.set("wideEvent", event);
         return res.status(403).json({
           error:
             "Only admins can change a paper's PDF. Contact info.descing@gmail.com to change this paper's PDF",
@@ -523,6 +528,7 @@ export class PapersController {
       .where(eq(papersTable.id, paperId))
       .returning();
 
+    req.ctx.set("wideEvent", event);
     return res.status(200).json(updatedPaper);
   };
 

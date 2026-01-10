@@ -12,14 +12,12 @@ import { adminAuth } from "./utils/admin-auth";
 import { db } from "./config/db";
 import { logger, httpLogger } from "./config/logger";
 import errorHandler from "./middlewares/error-handler";
-import { requestContextMiddleware } from "./middlewares/request-context";
 import { wideEventMiddleware } from "./middlewares/wide-event";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(httpLogger);
-app.use(requestContextMiddleware);
 app.use(wideEventMiddleware);
 
 app.use(
@@ -134,7 +132,7 @@ app.get("/health", async (req: Request, res: Response) => {
       authenticated: isAuthenticated,
     });
   } catch (error) {
-    console.error("Health check failed:", error);
+    logger.error(error, "Health check failed:");
     res.status(500).json({
       status: "unhealthy",
       database: "disconnected",
@@ -159,7 +157,7 @@ app.get("/institutions", async (_req: Request, res: Response) => {
       institutions,
     });
   } catch (error) {
-    console.error("Get institutions error:", error);
+    logger.error(error, "Get institutions error:");
     res.status(500).json({
       status: "error",
       message: "Failed to fetch institutions",
@@ -203,6 +201,11 @@ process.on("SIGTERM", async () => {
 });
 
 process.on("uncaughtException", (err) => {
-  console.error("Uncaught Exception:", err.message);
+  logger.error(`Uncaught Exception: ${err.message}`);
   process.exit(1); // Exit to prevent an unstable state
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  logger.error(promise, "Unhandled Rejection reason:", reason);
+  process.exit(1);
 });

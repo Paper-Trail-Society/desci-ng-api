@@ -25,23 +25,6 @@ const papersController = new PapersController();
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-/**
- * Wraps a middleware (e.g., Multer) to propagate AsyncLocalStorage context
- */
-export const alsMulterWrapper = (
-  middleware: RequestHandler,
-): RequestHandler => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const asyncResource = new AsyncResource("MulterMiddleware");
-
-    // Run the middleware inside the AsyncResource
-    // This preserves the store initialized in the first middleware
-    asyncResource.runInAsyncScope(() => {
-      middleware(req, res, next);
-    });
-  };
-};
-
 const upload = multer({
   dest: "uploads/papers",
   limits: { fileSize: MAX_FILE_SIZE },
@@ -57,7 +40,7 @@ const upload = multer({
 papersRouter.post(
   "/papers",
   requireAuth,
-  alsMulterWrapper(upload.single("file")),
+  upload.single("file"),
   validateRequest("body", uploadPaper),
   papersController.create,
 );
@@ -84,7 +67,7 @@ papersRouter.put(
     "params",
     z.object({ id: z.preprocess((v) => Number(v), z.number()) }),
   ),
-  alsMulterWrapper(upload.single("file")),
+  upload.single("file"),
   validateRequest("body", updatePaper),
   papersController.update,
 );
