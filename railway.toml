@@ -6,5 +6,5 @@ buildCommand = "echo building!"
 preDeployCommand = ["npm run prepare:prod"]
 startCommand = "npm run start"
 healthcheckPath = "/health"
-healthcheckTimeout = 100
-restartPolicyType = "never"
+healthcheckTimeout = 10
+restartPolicyType = "always"
