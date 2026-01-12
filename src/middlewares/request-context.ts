@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 
-export const wideEventMiddleware = async (
+export const requestContext = async (
   req: Request,
   res: Response,
   next: NextFunction,
