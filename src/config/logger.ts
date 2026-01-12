@@ -33,12 +33,19 @@ export const httpLogger = pinoHttp({
     paths: ["req.headers.authorization", "req.headers.cookie"],
     remove: true,
   },
+  serializers: {
+    req(req) {
+      return {
+        ...req,
+        ctx: Object.fromEntries(req.raw.ctx as Map<string, any>),
+      };
+    },
+  },
   genReqId: (_req, res) => {
     const requestId = randomUUID();
     res.setHeader("X-Request-Id", requestId);
     return requestId;
   },
-
   customLogLevel: (_req, res, err) => {
     if (err || res.statusCode >= 500) return "error";
     if (res.statusCode >= 400) return "warn";
