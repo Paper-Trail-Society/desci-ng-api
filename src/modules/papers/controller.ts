@@ -153,11 +153,7 @@ export class PapersController {
     return res.status(201).json(createdPaper);
   };
 
-  public index = async (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction,
-  ) => {
+  public index = async (req: AuthenticatedRequest, res: Response) => {
     const { categoryId, fieldId, userId, search, status, page, size } =
       fetchPapersQueryParams.parse(req.query);
 
