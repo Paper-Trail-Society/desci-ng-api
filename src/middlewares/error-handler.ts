@@ -1,8 +1,12 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 
 const ERROR_HANDLER_LOG_ORIGIN = "error-handler-middleware";
-const errorHandler = (err: Error, req: Request, res: Response) => {
-  res.locals.error = { type: err.name, message: err.message, stack: err.stack };
+const errorHandler = (
+  err: Error,
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   req.log
     .child({ origin: ERROR_HANDLER_LOG_ORIGIN })
     .error(err, "Internal server error");
