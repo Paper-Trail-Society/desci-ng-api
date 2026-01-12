@@ -17,8 +17,8 @@ import { wideEventMiddleware } from "./middlewares/wide-event";
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(httpLogger);
 app.use(wideEventMiddleware);
+app.use(httpLogger);
 
 app.use(
   cors({
