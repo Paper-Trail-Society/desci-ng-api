@@ -7,7 +7,7 @@ import { getKeywordsQueryParams } from "./schema";
 export class KeywordController {
   // TODO: add support for adding the paper count for each keyword to the SQL query and method response
   async index(req: Request, res: Response) {
-    const { query } = getKeywordsQueryParams.parse(req.query);
+    const { q } = getKeywordsQueryParams.parse(req.query);
 
     let keywordsQuery = db
       .select({
@@ -21,20 +21,20 @@ export class KeywordController {
     keywordsQuery = keywordsQuery
       .where(
         sql`
-      ${keywordsTable.name} % ${query}
+      ${keywordsTable.name} % ${q}
       OR EXISTS (
         SELECT 1
         FROM jsonb_array_elements_text(${keywordsTable.aliases}) alias
-        WHERE alias % ${query}
+        WHERE alias % ${q}
       )
     `,
       )
       .orderBy(
         desc(sql`
       GREATEST(
-        similarity(${keywordsTable.name}, ${query}),
+        similarity(${keywordsTable.name}, ${q}),
         (
-          SELECT MAX(similarity(alias, ${query}))
+          SELECT MAX(similarity(alias, ${q}))
           FROM jsonb_array_elements_text(${keywordsTable.aliases}) alias
         )
       )
