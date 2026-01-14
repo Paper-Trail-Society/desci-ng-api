@@ -207,11 +207,23 @@ export class PapersController {
     }
 
     const DEFAULT_VIEWABLE_PAPER_STATUS = "published";
-    if (!req.user && !req.admin) {
+
+    const isAuthenticatedUser = !!req.user;
+    const isAdmin = !!req.admin;
+
+    if (!isAuthenticatedUser && !isAdmin) {
+      // Anonymous or non-privileged user: only show published papers
       conditions.push(sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`);
+    } else if (req.admin && status) {
+      // Admin: can filter all papers by status
+      conditions.push(sql`papers.status = ${status}`);
     } else if (req.user && status) {
+      // Authenticated user requesting a specific status: filter their own papers
       conditions.push(sql`papers.user_id = ${req.user.id}`);
       conditions.push(sql`papers.status = ${status}`);
+    } else {
+      // Authenticated user without specific status or admin access: show published
+      conditions.push(sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`);
     }
 
     // Build final query with conditions
