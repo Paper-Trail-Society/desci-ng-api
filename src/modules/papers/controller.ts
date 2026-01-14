@@ -519,7 +519,6 @@ export class PapersController {
     const { id: paperId } = getPaperSchema.parse(req.params);
 
     const paperIdentifierIsId = !isNaN(parseInt(paperId, 10));
-    console.log({ user: req.user });
     const [paper] = await db
       .select({
         id: papersTable.id,
