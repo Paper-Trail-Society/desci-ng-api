@@ -9,7 +9,7 @@ import {
   getPaperSchema,
 } from "./schema";
 import z from "zod";
-import { requireAuth } from "../../middlewares/auth";
+import { authMiddleware } from "../../middlewares/auth";
 import { adminAuthMiddleware } from "../../middlewares/auth/admin-auth";
 
 export const papersRouter = Router();
@@ -31,7 +31,7 @@ const upload = multer({
 
 papersRouter.post(
   "/papers",
-  requireAuth,
+  authMiddleware,
   upload.single("file"),
   validateRequest("body", uploadPaper),
   papersController.create,
@@ -40,12 +40,14 @@ papersRouter.post(
 papersRouter.get(
   "/papers",
   adminAuthMiddleware({ optional: true }),
+  authMiddleware({ optional: true }),
   validateRequest("query", fetchPapersQueryParams),
   papersController.index,
 );
 
 papersRouter.get(
   "/papers/:id",
+  authMiddleware({ optional: true }),
   validateRequest("params", getPaperSchema),
   papersController.getPaperByIdOrSlug,
 );
@@ -54,7 +56,7 @@ papersRouter.get(
 papersRouter.put(
   "/papers/:id",
   adminAuthMiddleware({ optional: true }),
-  requireAuth,
+  authMiddleware,
   validateRequest(
     "params",
     z.object({ id: z.preprocess((v) => Number(v), z.number()) }),
@@ -66,7 +68,7 @@ papersRouter.put(
 
 papersRouter.delete(
   "/papers/:id",
-  requireAuth,
+  authMiddleware,
   validateRequest(
     "params",
     z.object({ id: z.preprocess((v) => Number(v), z.number()) }),

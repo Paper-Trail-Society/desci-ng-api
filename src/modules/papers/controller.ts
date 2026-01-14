@@ -18,7 +18,7 @@ import {
 } from "../../db/schema";
 import { eq, sql, inArray, or, and, SQL } from "drizzle-orm";
 import z from "zod";
-import { AuthenticatedRequest, MulterRequest } from "../../types";
+import { MulterRequest } from "../../types";
 import slug from "slug";
 import { createKeyword } from "../../modules/keywords/service";
 import { ipfsService } from "../../utils/ipfs";
@@ -153,7 +153,7 @@ export class PapersController {
     return res.status(201).json(createdPaper);
   };
 
-  public index = async (req: AuthenticatedRequest, res: Response) => {
+  public index = async (req: Request, res: Response) => {
     const { categoryId, fieldId, userId, search, status, page, size } =
       fetchPapersQueryParams.parse(req.query);
 
@@ -209,7 +209,8 @@ export class PapersController {
     const DEFAULT_VIEWABLE_PAPER_STATUS = "published";
     if (!req.user && !req.admin) {
       conditions.push(sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`);
-    } else if (status) {
+    } else if (req.user && status) {
+      conditions.push(sql`papers.user_id = ${req.user.id}`);
       conditions.push(sql`papers.status = ${status}`);
     }
 
@@ -517,12 +518,15 @@ export class PapersController {
   public getPaperByIdOrSlug = async (req: Request, res: Response) => {
     const { id: paperId } = getPaperSchema.parse(req.params);
 
+    const paperIdentifierIsId = !isNaN(parseInt(paperId, 10));
+    console.log({ user: req.user });
     const [paper] = await db
       .select({
         id: papersTable.id,
         title: papersTable.title,
         abstract: papersTable.abstract,
         notes: papersTable.notes,
+        status: papersTable.status,
         ipfsCid: papersTable.ipfsCid,
         ipfsUrl: papersTable.ipfsUrl,
         userId: papersTable.userId,
@@ -565,12 +569,18 @@ export class PapersController {
         eq(keywordsTable.id, paperKeywordsTable.keywordId),
       )
       .where(
-        or(
-          eq(
-            papersTable.id,
-            !isNaN(parseInt(paperId, 10)) ? parseInt(paperId, 10) : 0,
+        and(
+          // Only show 'published' papers unless the requester is the owner (can see their 'pending' and 'published')
+          req.user
+            ? and(
+                eq(papersTable.userId, req.user.id),
+                inArray(papersTable.status, ["pending", "published"]),
+              )
+            : eq(papersTable.status, "published"),
+          or(
+            eq(papersTable.id, paperIdentifierIsId ? parseInt(paperId, 10) : 0),
+            eq(papersTable.slug, paperId),
           ),
-          eq(papersTable.slug, paperId),
         ),
       )
       .groupBy(
@@ -593,7 +603,7 @@ export class PapersController {
     return res.status(200).json(paper);
   };
 
-  public delete = async (req: AuthenticatedRequest, res: Response) => {
+  public delete = async (req: Request, res: Response) => {
     const { id: paperId } = z
       .object({ id: z.preprocess((v) => Number(v), z.number()) })
       .parse(req.params);
