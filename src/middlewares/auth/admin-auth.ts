@@ -1,11 +1,10 @@
-import { Response, NextFunction } from "express";
+import { Request, Response, NextFunction } from "express";
 import { adminAuth } from "../../utils/admin-auth";
 import { fromNodeHeaders } from "better-auth/node";
-import { AuthenticatedRequest } from "../../types";
 
 export const adminAuthMiddleware =
   ({ optional = false }: { optional?: boolean }) =>
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
       const session = await adminAuth.api.getSession({
         headers: fromNodeHeaders(req.headers),
