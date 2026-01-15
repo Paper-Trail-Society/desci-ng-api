@@ -104,7 +104,7 @@ app.use(fieldRouter);
 app.use(keywordRouter);
 
 app.get("/", (_req: Request, res: Response) => {
-  res.send("DeSci API - Decentralized Science Platform");
+  res.send("Nubian Research API - Decentralized Science Platform");
 });
 
 // Health check endpoint
@@ -181,7 +181,7 @@ app.listen(port, (error) => {
     logger.error(error, "An error occured while starting API server");
     process.exit(1);
   }
-  logger.info(`DeSci API listening on port ${port}`);
+  logger.info(`Nubian Research API listening on port ${port}`);
 });
 
 module.exports = app;

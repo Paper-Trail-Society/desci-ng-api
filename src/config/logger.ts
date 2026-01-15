@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 const baseLogger = pino({
   level: process.env.LOG_LEVEL || "info",
   base: {
-    service: "desci-ng-api",
+    service: "nubianresearch-api",
     env: process.env.NODE_ENV || "development",
   },
   redact: {
