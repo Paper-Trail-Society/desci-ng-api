@@ -26,6 +26,10 @@ const baseLogger = pino({
 
 export const logger = baseLogger.child({ channel: "default" });
 
+/**
+ * TODO: Figure out how to delete the `ctx` field in the `req` object.
+ * The valid context (`ctx`) is in the base JSON.
+ */
 export const httpLogger = pinoHttp({
   name: "http",
   logger: baseLogger.child({ channel: "http" }),
@@ -33,13 +37,10 @@ export const httpLogger = pinoHttp({
     paths: ["req.headers.authorization", "req.headers.cookie"],
     remove: true,
   },
-  serializers: {
-    req(req) {
-      return {
-        ...req,
-        ctx: Object.fromEntries(req.raw.ctx as Map<string, any>),
-      };
-    },
+  customProps: (req, res) => {
+    return {
+      ctx: Object.fromEntries((req as any).ctx as Map<string, any>),
+    };
   },
   genReqId: (_req, res) => {
     const requestId = randomUUID();
