@@ -112,7 +112,7 @@ export class PapersController {
     );
 
     const createdPaper = await db.transaction(async (tx) => {
-      const paperSlug = slug(body.title.substring(0, 100));
+      const paperSlug = slug(`${body.title.substring(0, 100)} ${Date.now()}`);
       const [newPaper] = await tx
         .insert(papersTable)
         .values({
@@ -212,6 +212,7 @@ export class PapersController {
     const isAdmin = !!req.admin;
 
     if (!isAuthenticatedUser && !isAdmin) {
+      console.log("were here");
       // Anonymous or non-privileged user: only show published papers
       conditions.push(sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`);
     } else if (req.admin && status) {
