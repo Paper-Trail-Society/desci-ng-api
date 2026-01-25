@@ -13,6 +13,7 @@ import { db } from "./config/db";
 import { logger, httpLogger } from "./config/logger";
 import errorHandler from "./middlewares/error-handler";
 import { requestContext } from "./middlewares/request-context";
+import { donationRouter } from "./modules/donation/route";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -102,6 +103,7 @@ app.get("/user/jwt-token", async (req, res) => {
 app.use(papersRouter);
 app.use(fieldRouter);
 app.use(keywordRouter);
+app.use(donationRouter);
 
 app.get("/", (_req: Request, res: Response) => {
   res.send("Nubian Research API - Decentralized Science Platform");

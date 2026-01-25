@@ -9,8 +9,6 @@ import { fromNodeHeaders } from "better-auth/node";
 export const authMiddleware =
   ({ optional = false }: { optional?: boolean }) =>
   async (req: Request, res: Response, next: NextFunction) => {
-    const ctx = req.ctx;
-
     try {
       if (req.admin) {
         next();
@@ -33,6 +31,8 @@ export const authMiddleware =
         req.user = session.user;
         req.session = session.session;
 
+        console.table({ user: session.user });
+        req.user = session.user;
         req.ctx.set("user", session.user);
       }
 

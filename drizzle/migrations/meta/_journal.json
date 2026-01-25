@@ -57,6 +57,13 @@
       "when": 1761059684024,
       "tag": "0007_striped_zemo",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1769327091518,
+      "tag": "0008_careful_mongu",
+      "breakpoints": true
     }
   ]
 }

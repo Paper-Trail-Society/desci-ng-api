@@ -267,6 +267,28 @@ export const jwksTable = desciSchema.table("jwks", {
     .notNull(),
 });
 
+export const paystackDonationsTable = desciSchema.table("paystack_donations", {
+  id: serial("id").primaryKey(),
+  donorId: text("donor_id").references(() => usersTable.id, {
+    onDelete: "no action",
+  }),
+  donorName: varchar("donor_name", { length: 255 }).notNull(),
+  donorEmail: varchar("donor_email").notNull(),
+  amount: integer("amount").notNull(),
+  currencyCode: varchar("currency_code", { length: 3 }).notNull(),
+  paymentReference: varchar("payment_reference").unique().notNull(),
+  paymentStatus: varchar("payment_status", { length: 10 }).notNull(),
+  paymentMethod: varchar("payment_method", { length: 10 }).notNull(),
+  paidAt: timestamp("paid_at").notNull(),
+  transactionData: jsonb("transaction_data").notNull(),
+  createdAt: timestamp("created_at")
+    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .notNull(),
+  updatedAt: timestamp("created_at")
+    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .notNull(),
+});
+
 export type InsertUser = typeof usersTable.$inferInsert;
 export type SelectUser = typeof usersTable.$inferSelect;
 
