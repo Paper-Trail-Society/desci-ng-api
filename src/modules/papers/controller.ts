@@ -221,9 +221,11 @@ export class PapersController {
       // Authenticated user requesting a specific status: filter their own papers
       conditions.push(sql`papers.user_id = ${req.user.id}`);
       conditions.push(sql`papers.status = ${status}`);
-    } else {
-      // Authenticated user without specific status or admin access: show published
-      conditions.push(sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`);
+    } else if (req.user && !status) {
+      // Authenticated user without specific status or admin access: show all papers
+      conditions.push(
+        sql`papers.status IN ('pending', 'published', 'rejected')`,
+      );
     }
 
     // Build final query with conditions
