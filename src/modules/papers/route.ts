@@ -31,7 +31,7 @@ const upload = multer({
 
 papersRouter.post(
   "/papers",
-  authMiddleware,
+  authMiddleware({}),
   upload.single("file"),
   validateRequest("body", uploadPaper),
   papersController.create,
@@ -68,7 +68,7 @@ papersRouter.put(
 
 papersRouter.delete(
   "/papers/:id",
-  authMiddleware,
+  authMiddleware({}),
   validateRequest(
     "params",
     z.object({ id: z.preprocess((v) => Number(v), z.number()) }),
