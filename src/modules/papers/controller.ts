@@ -107,12 +107,14 @@ export class PapersController {
 
     const fileBlob = new Blob([fs.readFileSync(file.path)]);
 
+    // Pinata upload should be reverted if DB operation fails.
+    // Wrap paperCreation in try catch.
     const ipfsResponse = await ipfsService.uploadFile(
       new File([fileBlob], file.originalname, { type: file.mimetype }),
     );
 
     const createdPaper = await db.transaction(async (tx) => {
-      const paperSlug = slug(`${body.title.substring(0, 80)} ${Date.now()}`);
+      const paperSlug = slug(`${body.title.substring(0, 75)} ${Date.now()}`);
       const [newPaper] = await tx
         .insert(papersTable)
         .values({
