@@ -112,7 +112,7 @@ export class PapersController {
     );
 
     const createdPaper = await db.transaction(async (tx) => {
-      const paperSlug = slug(`${body.title.substring(0, 100)} ${Date.now()}`);
+      const paperSlug = slug(`${body.title.substring(0, 80)} ${Date.now()}`);
       const [newPaper] = await tx
         .insert(papersTable)
         .values({
