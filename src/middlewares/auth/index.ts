@@ -31,7 +31,6 @@ export const authMiddleware =
         req.user = session.user;
         req.session = session.session;
 
-        console.table({ user: session.user });
         req.user = session.user;
         req.ctx.set("user", session.user);
       }

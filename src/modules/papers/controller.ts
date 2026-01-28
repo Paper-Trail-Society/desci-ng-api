@@ -22,6 +22,7 @@ import { MulterRequest } from "../../types";
 import slug from "slug";
 import { createKeyword } from "../../modules/keywords/service";
 import { ipfsService } from "../../utils/ipfs";
+import { buildOffsetPaginationLinks } from "../../utils/paginator";
 
 export class PapersController {
   public create = async (req: MulterRequest, res: Response) => {
@@ -260,26 +261,26 @@ export class PapersController {
     const papersResults = await db.execute(finalQuery);
     const [{ total }] = await db.execute(countQuery);
 
-    const nextPageUrl =
-      (total as number) > offset + size
-        ? `/papers?page=${page + 1}&size=${size}` +
-          `${categoryId ? `&categoryId=${categoryId}` : ""}` +
-          `${fieldId ? `&fieldId=${fieldId}` : ""}` +
-          `${search ? `&search=${encodeURIComponent(search)}` : ""}`
-        : null;
-    const prevPageUrl =
-      page > 1
-        ? `/papers?page=${page - 1}&size=${size}` +
-          `${categoryId ? `&categoryId=${categoryId}` : ""}` +
-          `${fieldId ? `&fieldId=${fieldId}` : ""}` +
-          `${search ? `&search=${search}` : ""}`
-        : null;
+    const totalCount = parseInt(String(total), 10);
+
+    const { next_page, prev_page } = buildOffsetPaginationLinks("/papers", {
+      total: totalCount,
+      page,
+      size,
+      query: {
+        categoryId,
+        fieldId,
+        search,
+        userId,
+        status,
+      },
+    });
 
     const response = {
       data: papersResults,
-      next_page: nextPageUrl,
-      prev_page: prevPageUrl,
-      total,
+      next_page,
+      prev_page,
+      total: totalCount,
       size,
     };
 
