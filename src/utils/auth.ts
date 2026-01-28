@@ -22,6 +22,7 @@ export const auth = betterAuth({
     .split(",")
     .filter(Boolean),
   advanced: {
+    cookiePrefix: "nubianresearch",
     crossSubDomainCookies: {
       enabled: true,
       domain: "nubianresearch.com"
