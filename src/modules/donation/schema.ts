@@ -1,0 +1,71 @@
+import { z } from "zod";
+
+export const paystackEventSchema = z.object({
+  event: z.string(),
+  data: z.object({
+    id: z.number(),
+    domain: z.string(),
+    status: z.string(),
+    reference: z.string(),
+    amount: z.number(),
+    message: z.string().nullable(),
+    gateway_response: z.string(),
+    paid_at: z.string(),
+    created_at: z.string(),
+    channel: z.string(),
+    currency: z.string(),
+    ip_address: z.string(),
+    metadata: z
+      .object({
+        referrer: z.string(),
+      })
+      .catchall(z.any()),
+    fees_breakdown: z.any().nullable(),
+    log: z.any().nullable(),
+    fees: z.number(),
+    fees_split: z.any().nullable(),
+    authorization: z.object({
+      authorization_code: z.string(),
+      bin: z.string().nullable(),
+      last4: z.string().nullable(),
+      exp_month: z.string().nullable(),
+      exp_year: z.string().nullable(),
+      channel: z.string().nullable(),
+      card_type: z.string().nullable(),
+      bank: z.string(),
+      country_code: z.string(),
+      brand: z.string().nullable(),
+      reusable: z.boolean().nullable(),
+      signature: z.string().nullable(),
+      account_name: z.string().nullable(),
+      receiver_bank_account_number: z.string().nullable(),
+      receiver_bank: z.string().nullable(),
+    }),
+    customer: z.object({
+      id: z.number(),
+      first_name: z.string(),
+      last_name: z.string(),
+      email: z.string(),
+      customer_code: z.string(),
+      phone: z.string(),
+      metadata: z.any(),
+      risk_action: z.string(),
+      international_format_phone: z.string().nullable(),
+    }),
+    plan: z.record(z.any(), z.any()),
+    subaccount: z.record(z.any(), z.any()),
+    split: z.record(z.any(), z.any()),
+    order_id: z.number().nullable(),
+    paidAt: z.string(),
+    requested_amount: z.number(),
+    pos_transaction_data: z.any(),
+    source: z.object({
+      type: z.string(),
+      source: z.string(),
+      entry_point: z.string(),
+      identifier: z.string().nullable(),
+    }),
+  }),
+});
+
+export type PaystackEventSchema = z.infer<typeof paystackEventSchema>;

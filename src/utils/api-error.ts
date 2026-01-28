@@ -7,10 +7,13 @@ class ApiError extends Error {
     if (name) {
       this.name = name;
     }
-    if (stack) {
-      this.stack = stack;
-    } else {
-      Error.captureStackTrace(this, this.constructor);
+
+    if (process.env.NODE_ENV !== "production") {
+      if (stack) {
+        this.stack = stack;
+      } else {
+        Error.captureStackTrace(this, this.constructor);
+      }
     }
   }
 }
