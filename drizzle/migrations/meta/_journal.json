@@ -64,6 +64,13 @@
       "when": 1769554504714,
       "tag": "0008_open_jane_foster",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1769595281784,
+      "tag": "0009_lovely_rockslide",
+      "breakpoints": true
     }
   ]
 }

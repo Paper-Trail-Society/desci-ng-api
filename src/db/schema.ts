@@ -277,8 +277,8 @@ export const paystackDonationsTable = desciSchema.table("paystack_donations", {
   amount: integer("amount").notNull(),
   currencyCode: varchar("currency_code", { length: 3 }).notNull(),
   paymentReference: varchar("payment_reference").unique().notNull(),
-  paymentStatus: varchar("payment_status", { length: 10 }).notNull(),
-  paymentMethod: varchar("payment_method", { length: 10 }).notNull(),
+  paymentStatus: varchar("payment_status", { length: 50 }).notNull(),
+  paymentMethod: varchar("payment_method", { length: 50 }).notNull(),
   paidAt: timestamp("paid_at").notNull(),
   transactionData: jsonb("transaction_data").notNull(),
   createdAt: timestamp("created_at")

@@ -1,0 +1,2 @@
+ALTER TABLE "desci"."paystack_donations" ALTER COLUMN "payment_status" SET DATA TYPE varchar(50);--> statement-breakpoint
+ALTER TABLE "desci"."paystack_donations" ALTER COLUMN "payment_method" SET DATA TYPE varchar(50);
