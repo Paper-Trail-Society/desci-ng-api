@@ -11,7 +11,9 @@ CREATE TABLE "desci"."paystack_donations" (
 	"paid_at" timestamp NOT NULL,
 	"transaction_data" jsonb NOT NULL,
 	"created_at" timestamp NOT NULL,
+	"updated_at" timestamp NOT NULL,
 	CONSTRAINT "paystack_donations_payment_reference_unique" UNIQUE("payment_reference")
 );
 --> statement-breakpoint
 ALTER TABLE "desci"."paystack_donations" ADD CONSTRAINT "paystack_donations_donor_id_users_id_fk" FOREIGN KEY ("donor_id") REFERENCES "desci"."users"("id") ON DELETE no action ON UPDATE no action;
+COMMENT ON COLUMN "desci"."paystack_donations"."amount" IS 'Amount is stored in the lowest denomination of the currency';

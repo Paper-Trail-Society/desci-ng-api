@@ -284,7 +284,7 @@ export const paystackDonationsTable = desciSchema.table("paystack_donations", {
   createdAt: timestamp("created_at")
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
-  updatedAt: timestamp("created_at")
+  updatedAt: timestamp("updated_at")
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
 });
