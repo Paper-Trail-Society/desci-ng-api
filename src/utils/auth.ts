@@ -21,6 +21,12 @@ export const auth = betterAuth({
   trustedOrigins: (process.env.BETTER_AUTH_TRUSTED_ORIGINS || "")
     .split(",")
     .filter(Boolean),
+  advanced: {
+    crossSubDomainCookies: {
+      enabled: true,
+      domain: "nubianresearch.com"
+    },
+  },
   rateLimit: {
     enabled: false,
   },
