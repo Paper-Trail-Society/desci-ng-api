@@ -20,6 +20,5 @@ jobs:
       
       - name: Run tests
         run: |
-          docker ps
-          curl --retry 5 --retry-delay 2 localhost:8000/health
+          docker compose exec api /bin/sh -c "npm run test"
 
