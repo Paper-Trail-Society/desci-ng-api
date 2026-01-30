@@ -1,11 +1,12 @@
-import "dotenv/config"
-import request from 'supertest';
-import { describe, it, expect, } from 'vitest';
+import "dotenv/config";
+import request from "supertest";
+import { describe, it } from "vitest";
+import app from "../../src/app";
 
-const api = request(`http://localhost:${process.env.PORT}`);
+const api = request(app);
 
-describe('GET /', () => {
-  it.concurrent('should return a 200 status and a message', async ({ expect }) => {
+describe("GET /", () => {
+  it.concurrent("should return a 200 status and a message", async ({ expect }) => {
     const res = await api
       .get('/')
       .expect('Content-Type', "text/html; charset=utf-8")
@@ -14,7 +15,7 @@ describe('GET /', () => {
     expect(res.text).toBe('Nubian Research API - Decentralized Science Platform');
   });
 
-  it.concurrent('should return a 200 status with health check', async ({ expect}) => {
+  it.concurrent("should return a 200 status with health check", async ({ expect}) => {
     const res = await api
       .get('/health')
       .expect('Content-Type', /json/)
