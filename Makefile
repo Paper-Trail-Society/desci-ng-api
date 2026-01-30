@@ -29,6 +29,9 @@ logs:
 ps:
 	docker compose ps
 
+test: up
+	docker compose exec api /bin/sh -c "npm run test"
+
 help:
 	@echo "Makefile targets:"
 	@echo "  all         - Runs down, build, up, logs."
