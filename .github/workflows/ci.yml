@@ -10,15 +10,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install make
+
       - name: Setup environment variables
         run: |
           cp .env.example .env
       
-      - name: Start services with Docker Compose
-        run: |
-          docker compose up -d --build
-      
       - name: Run tests
         run: |
-          docker compose exec api /bin/sh -c "npm run test"
+          make test
 

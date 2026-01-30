@@ -29,7 +29,7 @@ logs:
 ps:
 	docker compose ps
 
-test: up
+test: setup
 	docker compose exec api /bin/sh -c "npm run test"
 
 help:
