@@ -1,0 +1,25 @@
+name: ci
+
+on: [push]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup environment variables
+        run: |
+          cp .env.example .env
+      
+      - name: Start services with Docker Compose
+        run: |
+          docker compose up -d --build
+      
+      - name: Run tests
+        run: |
+          docker ps
+          curl --retry 5 --retry-delay 2 localhost:8000/health
+
