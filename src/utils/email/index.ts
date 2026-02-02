@@ -36,7 +36,7 @@ class EmailService {
       process.env.ZEPTOMAIL_FROM_EMAIL ||
       "noreply@example.com";
     this.fromName =
-      config?.fromName || process.env.ZEPTOMAIL_FROM_NAME || "DeSci NG";
+      config?.fromName || process.env.ZEPTOMAIL_FROM_NAME || "Nubian Research";
 
     if (!token) {
       throw new ApiError(
@@ -175,7 +175,7 @@ class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <div class="logo">DeSci NG</div>
+            <div class="logo">Nubian Research</div>
           </div>
 
           <h1>Password Reset Request</h1>
@@ -218,13 +218,13 @@ ${resetUrl}
 
 Important: This password reset link will expire in 1 hour for security reasons.
 
-This is an automated message from DeSci NG.
+This is an automated message from Nubian Research.
 Please do not reply to this email.
     `.trim();
 
     await this.sendEmail({
       to,
-      subject: "Password Reset Request - DeSci NG",
+      subject: "Password Reset Request - Nubian Research",
       htmlBody,
       textBody,
     });
@@ -308,8 +308,7 @@ Please do not reply to this email.
 
           <p>Hi ${userName},</p>
 
-          <p>Welcome to DeSci NG! Please verify your email address to complete your registration.</p>
-
+          <p>Welcome to Nubian Research! Please verify your email address to complete your registration.</p>
           <div style="text-align: center;">
             <a href="${verificationUrl}" class="button">Verify Email</a>
           </div>
