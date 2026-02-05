@@ -1,13 +1,19 @@
+
+import { readFileSync } from "fs";
+import { join } from "path";
+import Handlebars from "handlebars";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { bearer, jwt, openAPI } from "better-auth/plugins";
 import * as schema from "../db/schema";
 import { db } from "../config/db";
-import { emailService } from "./email";
 import { logger } from "../config/logger";
+import { mailService } from "./email/email";
+
+const authLogger = logger.child({ origin: "auth", });
 
 export const auth = betterAuth({
-  appName: "Desci NG",
+  appName: "Nubian",
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
@@ -25,7 +31,7 @@ export const auth = betterAuth({
     cookiePrefix: "nubianresearch",
     crossSubDomainCookies: {
       enabled: true,
-      domain: "nubianresearch.com"
+      domain: "nubianresearch.com",
     },
   },
   rateLimit: {
@@ -53,11 +59,7 @@ export const auth = betterAuth({
     autoSignIn: true,
     sendResetPassword: async ({ user, url }) => {
       try {
-        await emailService.sendPasswordResetEmail({
-          to: user.email,
-          userName: user.name || user.email,
-          resetUrl: url,
-        });
+        void sendPasswordResetEmail({ user, resetUrl: url });
         logger.info(`Password reset email sent to ${user.email}`);
       } catch (error) {
         logger.error(
@@ -71,36 +73,86 @@ export const auth = betterAuth({
   },
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
-      try {
-        if (process.env.NODE_ENV === "production") {
-          await emailService.sendVerificationEmail({
-            to: user.email,
-            userName: user.name || user.email,
-            verificationUrl: url,
-          });
-          logger.info(`Verification email sent to ${user.email}`);
-        } else {
-          logger.info(`Verification URL for ${user.email}: ${url}`);
-        }
-      } catch (error) {
-        logger.error(
-          error,
-          `Failed to send verification email to ${user.email}:`,
-        );
-        throw error;
-      }
+      void sendVerificationEmail({ user, verificationUrl: url });
     },
   },
   plugins: [openAPI(), jwt(), bearer()],
   logger: {
     level: "info",
     log: (level, message, ...args) => {
-      logger.child({ origin: "auth" }).info({
+      authLogger.info({
         level,
         message,
         metadata: args,
-        timestamp: new Date().toISOString(),
       });
     },
   },
 });
+
+const sendPasswordResetEmail = async ({
+  user,
+  resetUrl,
+}: {
+  user: { name: string; email: string };
+  resetUrl: string;
+}) => {
+  const templatePath = join(__dirname, "../email-templates/password-reset.hbs");
+  const templateSource = readFileSync(templatePath, "utf8");
+  const template = Handlebars.compile(templateSource);
+
+  const html = template({
+    userName: user.name,
+    resetUrl: resetUrl,
+  });
+
+  try {
+    await mailService.send({
+      to: [{ address: user.email, name: user.name }],
+      subject: "Password Reset Request",
+      html,
+      from: {
+        address: process.env.MAIL_FROM_EMAIL!,
+        name: process.env.MAIL_FROM_NAME || "Nubian Research",
+      },
+    });
+  } catch (error) {
+    authLogger.error(
+      error,
+      `Failed to send password reset email to ${user.email}:`,
+    );
+  }
+};
+
+const sendVerificationEmail = async ({
+  user,
+  verificationUrl,
+}: {
+  user: { name: string; email: string };
+  verificationUrl: string;
+}) => {
+  const templatePath = join(
+    __dirname,
+    "../email-templates/email-verification.hbs",
+  );
+  const templateSource = readFileSync(templatePath, "utf8");
+  const template = Handlebars.compile(templateSource);
+
+  const html = template({
+    userName: user.name,
+    verificationUrl: verificationUrl,
+  });
+
+  try {
+    await mailService.send({
+      to: [{ address: user.email, name: user.name }],
+      subject: "Email Verification",
+      html,
+      from: {
+        address: process.env.MAIL_FROM_EMAIL || "noreply@nubianresearch.com",
+        name: process.env.MAIL_FROM_NAME || "Nubian Research",
+      },
+    });
+  } catch (error) {
+    authLogger.error(error, `Failed to send verification email to ${user.email}:`);
+  }
+};

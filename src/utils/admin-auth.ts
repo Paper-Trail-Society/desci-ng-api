@@ -6,7 +6,7 @@ import { db } from "../config/db";
 import { logger } from "../config/logger";
 
 export const adminAuth = betterAuth({
-  appName: "Desci NG admin",
+  appName: "Nubian admin",
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
