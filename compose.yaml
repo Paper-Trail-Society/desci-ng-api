@@ -39,7 +39,7 @@ services:
     container_name: desci-ng-mailpit
     image: axllent/mailpit:latest
     ports:
-      - '${MAIL_PORT}:1025'  # SMTP port
+      - '${FORWARD_MAIL_PORT:-1025}:1025'  # SMTP port
       - '8025:8025'  # Web interface port
     networks:
       - desci_ng

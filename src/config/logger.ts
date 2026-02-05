@@ -7,6 +7,7 @@ const baseLogger = pino({
   base: {
     service: "nubianresearch-api",
     env: process.env.NODE_ENV || "development",
+    timestamp: new Date().toISOString(),
   },
   redact: {
     paths: [
@@ -26,10 +27,6 @@ const baseLogger = pino({
 
 export const logger = baseLogger.child({ channel: "default" });
 
-/**
- * TODO: Figure out how to delete the `ctx` field in the `req` object.
- * The valid context (`ctx`) is in the base JSON.
- */
 export const httpLogger = pinoHttp({
   name: "http",
   logger: baseLogger.child({ channel: "http" }),
@@ -37,7 +34,7 @@ export const httpLogger = pinoHttp({
     paths: ["req.headers.authorization", "req.headers.cookie"],
     remove: true,
   },
-  customProps: (req, res) => {
+  customProps: (req, _res) => {
     return {
       ctx: Object.fromEntries((req as any).ctx as Map<string, any>),
     };

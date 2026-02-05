@@ -215,7 +215,6 @@ export class PapersController {
     const isAdmin = !!req.admin;
 
     if (!isAuthenticatedUser && !isAdmin) {
-      console.log("were here");
       // Anonymous or non-privileged user: only show published papers
       conditions.push(sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`);
     } else if (req.admin && status) {
