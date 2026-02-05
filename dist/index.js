@@ -16,11 +16,12 @@ const admin_auth_1 = require("./utils/admin-auth");
 const db_1 = require("./config/db");
 const logger_1 = require("./config/logger");
 const error_handler_1 = __importDefault(require("./middlewares/error-handler"));
-const wide_event_1 = require("./middlewares/wide-event");
+const request_context_1 = require("./middlewares/request-context");
+const route_4 = require("./modules/donation/route");
 const app = (0, express_1.default)();
 const port = process.env.PORT || 3000;
+app.use(request_context_1.requestContext);
 app.use(logger_1.httpLogger);
-app.use(wide_event_1.wideEventMiddleware);
 app.use((0, cors_1.default)({
     origin: (process.env.FRONTEND_URLS || "http://localhost:3000,http://localhost:3001")
         .split(",")
@@ -89,8 +90,9 @@ app.get("/user/jwt-token", async (req, res) => {
 app.use(route_3.papersRouter);
 app.use(route_1.fieldRouter);
 app.use(route_2.keywordRouter);
+app.use(route_4.donationRouter);
 app.get("/", (_req, res) => {
-    res.send("DeSci API - Decentralized Science Platform");
+    res.send("Nubian Research API - Decentralized Science Platform");
 });
 // Health check endpoint
 app.get("/health", async (req, res) => {
@@ -162,7 +164,7 @@ app.listen(port, (error) => {
         logger_1.logger.error(error, "An error occured while starting API server");
         process.exit(1);
     }
-    logger_1.logger.info(`DeSci API listening on port ${port}`);
+    logger_1.logger.info(`Nubian Research API listening on port ${port}`);
 });
 module.exports = app;
 module.exports.default = app;

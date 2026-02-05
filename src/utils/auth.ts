@@ -8,7 +8,7 @@ import { bearer, jwt, openAPI } from "better-auth/plugins";
 import * as schema from "../db/schema";
 import { db } from "../config/db";
 import { logger } from "../config/logger";
-import { mailService } from "./email/email";
+import { mailService } from "./email/mail-service";
 
 const authLogger = logger.child({ origin: "auth", });
 
