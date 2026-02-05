@@ -9,11 +9,11 @@ class ZeptoMailAdapter extends AbstractMailClient {
   private token: string;
   
   constructor() {
-    const token = process.env.ZEPTOMAIL_TOKEN;
+    const token = process.env.MAIL_PASSWORD;
     super();
     if (!token) {
       throw new Error(
-        "ZeptoMail token is required. Please set ZEPTOMAIL_TOKEN environment variable.",
+        "ZeptoMail token is required. Please set MAIL_PASS environment variable.",
       );
     }
     this.token = token;
