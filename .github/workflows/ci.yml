@@ -1,0 +1,25 @@
+name: ci
+
+on: [push]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install make
+
+      - name: Setup environment variables
+        run: |
+          cp .env.example .env
+      
+      - name: Run tests
+        run: |
+          make test
+

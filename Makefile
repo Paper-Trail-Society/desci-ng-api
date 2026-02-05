@@ -10,13 +10,13 @@ up:
 
 setup: build
 	${MAKE} up
-	docker exec -it desci-ng-api /bin/sh -c "npm run prepare:dev"
+	docker exec desci-ng-api /bin/sh -c "npm run prepare:dev"
 
 db-migrate:
-	docker exec -it desci-ng-api /bin/sh -c "npm run db:migrate"
+	docker exec desci-ng-api /bin/sh -c "npm run db:migrate"
 
 db-generate:
-	docker exec -it desci-ng-api /bin/sh -c "npm run db:generate"
+	docker exec desci-ng-api /bin/sh -c "npm run db:generate"
 
 down:
 	docker compose down
@@ -28,6 +28,9 @@ logs:
 
 ps:
 	docker compose ps
+
+test: setup
+	docker compose exec api /bin/sh -c "npm run test"
 
 help:
 	@echo "Makefile targets:"
