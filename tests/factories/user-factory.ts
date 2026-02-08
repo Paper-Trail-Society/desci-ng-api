@@ -8,11 +8,14 @@ import {
   AdminInsert,
   Admin,
 } from "./db";
+import { auth } from "../../src/utils/auth";
 
 export class UserFactory {
   private static userCounter = 1;
 
-  static async create(overrides: Partial<UserInsert> = {}): Promise<User> {
+  static async create(
+    overrides: Partial<UserInsert> = {},
+  ): Promise<User & { authToken: string }> {
     const n = this.userCounter++;
 
     const [user] = await db
@@ -26,7 +29,10 @@ export class UserFactory {
       })
       .returning();
 
-    return user;
+    const ctx = await auth.$context;
+    const session = await ctx.internalAdapter.createSession(user.id, false);
+
+    return { ...user, authToken: session.token };
   }
 }
 
@@ -50,4 +56,3 @@ export class AdminFactory {
     return admin;
   }
 }
-
