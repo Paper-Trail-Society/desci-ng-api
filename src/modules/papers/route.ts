@@ -52,11 +52,10 @@ papersRouter.get(
   papersController.getPaperByIdOrSlug,
 );
 
-// need to merge optional admin auth and required user auth middleware for this route
 papersRouter.put(
   "/papers/:id",
   adminAuthMiddleware({ optional: true }),
-  authMiddleware,
+  authMiddleware({}),
   validateRequest(
     "params",
     z.object({ id: z.preprocess((v) => Number(v), z.number()) }),
