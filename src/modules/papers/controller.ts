@@ -540,6 +540,7 @@ export class PapersController {
       .select({
         id: papersTable.id,
         title: papersTable.title,
+        slug: papersTable.slug,
         abstract: papersTable.abstract,
         notes: papersTable.notes,
         status: papersTable.status,
@@ -586,7 +587,7 @@ export class PapersController {
       )
       .where(
         and(
-          // Only show 'published' papers unless the requester is the owner (can see their 'pending' and 'published')
+          // only show 'published' papers by default. Show pending papers if the requester is the owner
           req.user
             ? and(
                 eq(papersTable.userId, req.user.id),
