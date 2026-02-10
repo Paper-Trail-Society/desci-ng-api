@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import type { NextFunction, Request, Response } from "express";
+import type { Request, Response } from "express";
 import {
   fetchPapersQueryParams,
   getPaperSchema,
@@ -108,11 +108,18 @@ export class PapersController {
 
     const fileBlob = new Blob([fs.readFileSync(file.path)]);
 
-    // Pinata upload should be reverted if DB operation fails.
-    // Wrap paperCreation in try catch.
-    const ipfsResponse = await ipfsService.uploadFile(
-      new File([fileBlob], file.originalname, { type: file.mimetype }),
-    );
+    let paperCid = null;
+    try {
+      const ipfsResponse = await ipfsService.uploadFile(
+        new File([fileBlob], file.originalname, { type: file.mimetype }),
+      );
+      paperCid = ipfsResponse.cid;
+    } catch (error) {
+      req.ctx.set("error", error);
+      return res
+        .status(500)
+        .json({ error: "An error occurred while uploading paper" });
+    }
 
     const createdPaper = await db.transaction(async (tx) => {
       const paperSlug = slug(`${body.title.substring(0, 75)} ${Date.now()}`);
@@ -124,8 +131,8 @@ export class PapersController {
           abstract: body.abstract,
           categoryId: body.categoryId,
           notes: body.notes,
-          ipfsCid: ipfsResponse.cid,
-          ipfsUrl: `https://${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`,
+          ipfsCid: paperCid,
+          ipfsUrl: `https://${process.env.PINATA_GATEWAY}/ipfs/${paperCid}`,
           userId,
           status: "pending",
         })
@@ -211,24 +218,38 @@ export class PapersController {
 
     const DEFAULT_VIEWABLE_PAPER_STATUS = "published";
 
-    const isAuthenticatedUser = !!req.user;
     const isAdmin = !!req.admin;
 
-    if (!isAuthenticatedUser && !isAdmin) {
-      // Anonymous or non-privileged user: only show published papers
-      conditions.push(sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`);
+    if (req.user) {
+      if (userId) {
+        if (req.user.id !== userId && !isAdmin) {
+          // Authenticated user requesting papers of another user without admin access: only show published papers
+          conditions.push(sql`papers.user_id = ${userId}`);
+          conditions.push(
+            sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`,
+          );
+        } else {
+          // Authenticated user requesting their own papers: can filter by status or see all their papers
+          if (status) {
+            conditions.push(sql`papers.user_id = ${userId}`);
+            conditions.push(sql`papers.status = ${status}`);
+          } else {
+            req.log.info("User requesting all their papers");
+            conditions.push(sql`papers.user_id = ${userId}`);
+          }
+        }
+      }
     } else if (req.admin && status) {
       // Admin: can filter all papers by status
       conditions.push(sql`papers.status = ${status}`);
-    } else if (req.user && status) {
-      // Authenticated user requesting a specific status: filter their own papers
-      conditions.push(sql`papers.user_id = ${req.user.id}`);
-      conditions.push(sql`papers.status = ${status}`);
-    } else if (req.user && !status) {
-      // Authenticated user without specific status or admin access: show all papers
-      conditions.push(
-        sql`papers.status IN ('pending', 'published', 'rejected')`,
+    } else if (req.admin) {
+      // Admin without status filter: can see all papers
+      conditions = conditions.filter(
+        (condition) => !String(condition).includes("papers.status"),
       );
+    } else {
+      // Unauthenticated user: only show published papers
+      conditions.push(sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`);
     }
 
     // Build final query with conditions
@@ -308,7 +329,7 @@ export class PapersController {
 
     if (!req.admin && existingPaper.userId !== req.user!.id) {
       return res.status(403).json({
-        error: "You don't have permission to update this paper",
+        error: "Forbidden request",
       });
     }
 
@@ -405,15 +426,24 @@ export class PapersController {
       }
       const fileBlob = new Blob([fs.readFileSync(req.file.path)]);
 
-      const ipfsResponse = await ipfsService.uploadFile(
-        new File([fileBlob], req.file.originalname, {
-          type: req.file.mimetype,
-        }),
-      );
+      let paperCid: string | null = null;
+      try {
+        const ipfsResponse = await ipfsService.uploadFile(
+          new File([fileBlob], req.file.originalname, {
+            type: req.file.mimetype,
+          }),
+        );
+        paperCid = ipfsResponse.cid;
+      } catch (error) {
+        req.ctx.set("error", error);
+        return res
+          .status(500)
+          .json({ error: "An error occurred while uploading PDF" });
+      }
 
-      updatePayload["ipfsCid"] = ipfsResponse.cid;
+      updatePayload["ipfsCid"] = paperCid;
       updatePayload["ipfsUrl"] =
-        `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`;
+        `${process.env.PINATA_GATEWAY}/ipfs/${paperCid}`;
 
       // delete the previous file by CID
       await ipfsService.deleteFilesByCid([existingPaper.ipfsCid]);
@@ -636,9 +666,8 @@ export class PapersController {
       });
     }
 
-    // TODO: Allow admins to delete papers
-    if (existingPaper.userId != req.user!.id) {
-      return res.status(404).json({ error: "Paper not found" });
+    if (!req.admin && existingPaper.userId !== req.user!.id) {
+      return res.status(403).json({ error: "Forbidden request" });
     }
 
     await db.transaction(async (tx) => {
@@ -652,7 +681,11 @@ export class PapersController {
     const ipfsFile = await ipfsService.getFileByCid(existingPaper.ipfsCid);
 
     if (ipfsFile) {
-      const ipfsResponse = await ipfsService.deleteFilesByCid([ipfsFile.id]);
+      try {
+        await ipfsService.deleteFilesByCid([ipfsFile.id]);
+      } catch (error) {
+        // no-op: the IpfsService logs failed operations
+      }
     }
 
     return res.status(200).json({
