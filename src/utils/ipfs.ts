@@ -1,12 +1,18 @@
 import { PinataSDK } from "pinata";
+import { Logger } from "pino";
+import { logger } from "../config/logger";
 
 class IpfsService {
   private readonly pinata: PinataSDK;
+  private readonly logger: Logger;
 
   constructor() {
     const isPinataEnabled = process.env.ENABLE_PINATA === "true";
 
-    if (isPinataEnabled && (!process.env.PINATA_JWT || !process.env.PINATA_GATEWAY)) {
+    if (
+      isPinataEnabled &&
+      (!process.env.PINATA_JWT || !process.env.PINATA_GATEWAY)
+    ) {
       throw new Error("[PINATA_JWT] and [PINATA_GATEWAY] is not defined.");
     }
 
@@ -14,16 +20,33 @@ class IpfsService {
       pinataJwt: process.env.PINATA_JWT,
       pinataGateway: process.env.PINATA_GATEWAY,
     });
+    this.logger = logger.child({ origin: "ipfs-service" });
   }
 
   async uploadFile(file: File) {
-    const response = await this.pinata.upload.public.file(file);
-    return response;
+    try {
+      const response = await this.pinata.upload.public.file(file);
+      return response;
+    } catch (error) {
+      this.logger.info(
+        { error, ctx: file },
+        `An error occurred while uploading file: ${file.name} to Pinata`,
+      );
+      throw error;
+    }
   }
 
   async deleteFilesByCid(ids: string[]) {
-    const response = await this.pinata.files.public.delete(ids);
-    return response;
+    try {
+      const response = await this.pinata.files.public.delete(ids);
+      return response;
+    } catch (error) {
+      this.logger.info(
+        { error, ctx: { ids } },
+        "An error occurred while deleting file on Pinata",
+      );
+      throw error
+    }
   }
 
   async getFileByCid(cid: string) {
