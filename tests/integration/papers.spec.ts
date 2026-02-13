@@ -6,6 +6,7 @@ import { DatabaseSeeder } from "../setup/database-seeder";
 import { PaperFactory } from "../factories/paper-factory";
 import { UserFactory } from "../factories/user-factory";
 import { CategoryFactory } from "../factories/field-factory";
+import { ipfsService } from "../../src/utils/ipfs";
 
 const TEST_CID = "mock-cid";
 const TEST_PDF_BUFFER = Buffer.from("%PDF-1.4 Test PDF content");
@@ -82,7 +83,6 @@ describe("GET /papers", () => {
     expect(res.body.data[0]).toHaveProperty("id", paper1.id);
   });
 
-
   it("allows authenticated users to see their own pending papers", async ({
     expect,
   }) => {
@@ -108,9 +108,11 @@ describe("GET /papers", () => {
     expect(res.body.data.length).toBe(1);
     expect(res.body.data[0]).toHaveProperty("status", "pending");
     expect(res.body.data[0]).toHaveProperty("id", pendingPaper.id);
-});
+  });
 
-  it ("allows authenticated users to filter their papers by status", async ({ expect }) => {
+  it("allows authenticated users to filter their papers by status", async ({
+    expect,
+  }) => {
     const testUser = await UserFactory.create({
       email: "test@example.com",
     });
@@ -149,6 +151,238 @@ describe("GET /papers", () => {
     expect(publishedRes.body.data[0]).toHaveProperty("status", "published");
     expect(publishedRes.body.data[0]).toHaveProperty("id", publishedPaper.id);
   });
+
+  it("supports pagination with page and size parameters", async ({
+    expect,
+  }) => {
+    for (let i = 0; i < 15; i++) {
+      await PaperFactory.create({ status: "published" });
+    }
+
+    const firstPageRes = await api
+      .get("/papers")
+      .query({ page: 1, size: 10 })
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(firstPageRes.body).toHaveProperty("total", 15);
+    expect(firstPageRes.body).toHaveProperty("size", 10);
+    expect(Array.isArray(firstPageRes.body.data)).toBe(true);
+    expect(firstPageRes.body.data).toHaveLength(10);
+    expect(firstPageRes.body.prev_page).toBeNull();
+    expect(firstPageRes.body.next_page).toEqual(
+      "/papers?page=2&size=10",
+    );
+
+    const secondPageRes = await api
+      .get("/papers")
+      .query({ page: 2, size: 10 })
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(secondPageRes.body).toHaveProperty("total", 15);
+    expect(secondPageRes.body).toHaveProperty("size", 10);
+    expect(Array.isArray(secondPageRes.body.data)).toBe(true);
+    expect(secondPageRes.body.data).toHaveLength(5);
+    expect(secondPageRes.body.prev_page).toEqual(
+      "/papers?page=1&size=10",
+    );
+    expect(secondPageRes.body.next_page).toBeNull();
+  });
+
+  it("returns papers ordered by newest first", async ({ expect }) => {
+    const olderPaper = await PaperFactory.create({
+      title: "Older Paper",
+      status: "published",
+      createdAt: new Date("2023-01-01T00:00:00Z"),
+    });
+    const middlePaper = await PaperFactory.create({
+      title: "Middle Paper",
+      status: "published",
+      createdAt: new Date("2023-01-02T00:00:00Z"),
+    });
+    const newestPaper = await PaperFactory.create({
+      title: "Newest Paper",
+      status: "published",
+      createdAt: new Date("2023-01-03T00:00:00Z"),
+    });
+
+    const res = await api
+      .get("/papers")
+      .query({ size: 10 })
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(res.body.data[0]).toHaveProperty("id", newestPaper.id);
+    expect(res.body.data[2]).toHaveProperty("id", olderPaper.id);
+    expect(res.body.data[1]).toHaveProperty("id", middlePaper.id);
+  });
+
+  it("allows filtering papers by category", async ({ expect }) => {
+    const user = await UserFactory.create({
+      email: "category-user@example.com",
+    });
+    const categoryA = await CategoryFactory.create({ name: "Category A" });
+    const categoryB = await CategoryFactory.create({ name: "Category B" });
+
+    const paperInCategoryA1 = await PaperFactory.create({
+      status: "published",
+      userId: user.id,
+      categoryId: categoryA.id,
+    });
+    const paperInCategoryA2 = await PaperFactory.create({
+      status: "published",
+      userId: user.id,
+      categoryId: categoryA.id,
+    });
+
+    await PaperFactory.create({
+      status: "published",
+      userId: user.id,
+      categoryId: categoryB.id,
+    });
+
+    const res = await api
+      .get("/papers")
+      .query({ categoryId: categoryA.id })
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data).toHaveLength(2);
+    const returnedIds = res.body.data.map((paper: any) => paper.id);
+    expect(returnedIds).toEqual(
+      expect.arrayContaining([paperInCategoryA1.id, paperInCategoryA2.id]),
+    );
+  });
+
+  it("ignores status filter for anonymous users and only returns published papers", async ({
+    expect,
+  }) => {
+    const pendingPaper = await PaperFactory.create({ status: "pending" });
+    const publishedPaper = await PaperFactory.create({ status: "published" });
+
+    const res = await api
+      .get("/papers")
+      .query({ status: "pending" })
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBe(1);
+    expect(res.body.data[0]).toHaveProperty("status", "published");
+    expect(res.body.data[0]).toHaveProperty("id", publishedPaper.id);
+    expect(res.body.data[0].id).not.toBe(pendingPaper.id);
+  });
+
+  it("only returns published papers when authenticated users request another user's papers", async ({
+    expect,
+  }) => {
+    const owner = await UserFactory.create({
+      email: "owner-no-status@example.com",
+    });
+    const otherUser = await UserFactory.create({
+      email: "other-no-status@example.com",
+    });
+
+    const ownerPendingPaper = await PaperFactory.create({
+      status: "pending",
+      userId: owner.id,
+    });
+    const ownerPublishedPaper1 = await PaperFactory.create({
+      status: "published",
+      userId: owner.id,
+    });
+    const ownerPublishedPaper2 = await PaperFactory.create({
+      status: "published",
+      userId: owner.id,
+    });
+
+    await PaperFactory.create({
+      status: "published",
+      userId: otherUser.id,
+    });
+
+    const res = await api
+      .get("/papers")
+      .query({ userId: owner.id })
+      .set("Authorization", `Bearer ${otherUser.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(Array.isArray(res.body.data)).toBe(true);
+    const returnedIds = res.body.data.map((paper: any) => paper.id);
+    expect(returnedIds).toEqual(
+      expect.arrayContaining([
+        ownerPublishedPaper1.id,
+        ownerPublishedPaper2.id,
+      ]),
+    );
+    expect(returnedIds).not.toContain(ownerPendingPaper.id);
+    for (const paper of res.body.data) {
+      expect(paper.userId).toBe(owner.id);
+      expect(paper.status).toBe("published");
+    }
+  });
+
+  it("only returns published papers when authenticated users request another user's papers with a status filter", async ({
+    expect,
+  }) => {
+    const owner = await UserFactory.create({
+      email: "owner@example.com",
+    });
+    const otherUser = await UserFactory.create({
+      email: "other@example.com",
+    });
+
+    await PaperFactory.create({
+      status: "pending",
+      userId: owner.id,
+    });
+    const ownerPublishedPaper = await PaperFactory.create({
+      status: "published",
+      userId: owner.id,
+    });
+    await PaperFactory.create({
+      status: "published",
+      userId: otherUser.id,
+    });
+
+    const res = await api
+      .get("/papers")
+      .query({ userId: owner.id, status: "pending" })
+      .set("Authorization", `Bearer ${otherUser.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBe(1);
+    expect(res.body.data[0]).toHaveProperty("userId", owner.id);
+    expect(res.body.data[0]).toHaveProperty("status", "published");
+    expect(res.body.data[0]).toHaveProperty("id", ownerPublishedPaper.id);
+  });
+
+  it("returns empty results and no pagination links when no papers match the filters", async ({
+    expect,
+  }) => {
+    await PaperFactory.create({
+      title: "Some other paper",
+      abstract: "A different abstract",
+      status: "published",
+    });
+
+    const res = await api
+      .get("/papers")
+      .query({ search: "no-matching-query-term" })
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data).toHaveLength(0);
+    expect(res.body.total).toBe(0);
+    expect(res.body.next_page).toBeNull();
+    expect(res.body.prev_page).toBeNull();
+  });
 });
 
 describe("POST /papers", () => {
@@ -181,6 +415,37 @@ describe("POST /papers", () => {
       .expect(400);
   });
 
+  it("returns 400 when required fields are missing in request payload", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+
+    const res = await api
+      .post("/papers")
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(400);
+
+      expect(res.body).toHaveProperty("errors");
+  })
+
+  it("returns 400 when the PDF file is not of the correct mime type (PDF)", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+
+    const res = await api
+      .post("/papers")
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .attach("file", TEST_PDF_BUFFER, {
+        filename: "test1.html",
+        contentType: "application/html",
+      })
+      .expect("Content-Type", /json/)
+      .expect(400);
+
+  })
+
   it("returns 400 when an invalid category ID is passed", async ({
     expect,
   }) => {
@@ -206,6 +471,37 @@ describe("POST /papers", () => {
       "error",
       `Invalid category ID: ${invalidCategoryId}`,
     );
+  });
+
+
+  it("creates paper successfully", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testCategory = await CategoryFactory.create({
+      name: "Test Category",
+    });
+    const res = await api
+      .post("/papers")
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .field("title", "Test Paper with PDF")
+      .field("abstract", "Test abstract")
+      .field("categoryId", testCategory.id.toString())
+      .field("notes", "Test notes")
+      .attach("file", TEST_PDF_BUFFER, {
+        filename: "test.pdf",
+        contentType: "application/pdf",
+      })
+      .expect("Content-Type", /json/)
+      .expect(201);
+
+    expect(ipfsService.uploadFile).toHaveBeenCalled();
+
+    expect(res.body).toHaveProperty("id");
+    expect(res.body).toHaveProperty("title", "Test Paper with PDF");
+    expect(res.body).toHaveProperty("abstract", "Test abstract");
+    expect(res.body).toHaveProperty("status", "pending");
+    expect(res.body).toHaveProperty("ipfsCid", TEST_CID);
   });
 
   it("returns unique paper slug when a paper with the same title exists", async ({
@@ -236,6 +532,7 @@ describe("POST /papers", () => {
       .expect(201);
 
     expect(firstPaper.body).toHaveProperty("slug", firstPaper.body.slug);
+    expect(ipfsService.uploadFile).toHaveBeenCalled();
 
     // Create the second paper with the same title
     const secondPaper = await api
@@ -256,35 +553,9 @@ describe("POST /papers", () => {
     const secondPaperSlug = secondPaper.body.slug;
 
     expect(secondPaperSlug).not.toBe(firstPaperSlug);
+    expect(ipfsService.uploadFile).toHaveBeenCalled();
   });
 
-  it("uploads PDF and creates paper successfully", async ({ expect }) => {
-    const testUser = await UserFactory.create({
-      email: "test@example.com",
-    });
-    const testCategory = await CategoryFactory.create({
-      name: "Test Category",
-    });
-    const res = await api
-      .post("/papers")
-      .set("Authorization", `Bearer ${testUser.authToken}`)
-      .field("title", "Test Paper with PDF")
-      .field("abstract", "Test abstract")
-      .field("categoryId", testCategory.id.toString())
-      .field("notes", "Test notes")
-      .attach("file", TEST_PDF_BUFFER, {
-        filename: "test.pdf",
-        contentType: "application/pdf",
-      })
-      .expect("Content-Type", /json/)
-      .expect(201);
-
-    expect(res.body).toHaveProperty("id");
-    expect(res.body).toHaveProperty("title", "Test Paper with PDF");
-    expect(res.body).toHaveProperty("abstract", "Test abstract");
-    expect(res.body).toHaveProperty("status", "pending");
-    expect(res.body).toHaveProperty("ipfsCid", TEST_CID);
-  });
 });
 
 describe("GET /papers/:id", () => {
@@ -501,7 +772,8 @@ describe("DELETE /papers/:id", () => {
       .set("Authorization", `Bearer ${testUser.authToken}`)
       .expect("Content-Type", /json/)
       .expect(200);
-
+    
+    expect(ipfsService.deleteFilesByCid).toHaveBeenCalled();
     expect(res.body).toHaveProperty("message", `'${paper.title}' paper deleted successfully`);
   });
 

@@ -83,7 +83,7 @@ export class PapersController {
       });
     }
 
-    const keywordIdsToMapToPaper: Set<number> = new Set(
+    const keywordIdsToMapToPaper = new Set(
       keywordIdsInDB.map(({ id }) => id),
     );
 
