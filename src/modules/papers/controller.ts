@@ -23,6 +23,7 @@ import slug from "slug";
 import { createKeyword } from "../../modules/keywords/service";
 import { ipfsService } from "../../utils/ipfs";
 import { buildOffsetPaginationLinks } from "../../utils/paginator";
+import { PaginatedPapersResponse, Paper } from "./types";
 
 export class PapersController {
   public create = async (req: MulterRequest, res: Response) => {
@@ -185,14 +186,15 @@ export class PapersController {
                 papers.created_at AS "createdAt",
                 papers.updated_at AS "updatedAt",
                 papers.category_id AS "categoryId",
+                json_build_object('id', categories.id, 'name', categories.name, 'fieldId', categories.field_id) AS category,
                 json_build_object('id', users.id, 'name', users.name, 'email', users.email) AS user,
                 json_agg(json_build_object('id', keywords.id, 'name', keywords.name, 'aliases', keywords.aliases)) FILTER (WHERE keywords.id IS NOT NULL) AS keywords
-              FROM desci.papers as papers
-              INNER JOIN desci.users as users ON papers.user_id = users.id
-              LEFT JOIN desci.paper_keywords as paper_keywords ON papers.id = paper_keywords.paper_id
-              LEFT JOIN desci.keywords as keywords ON keywords.id = paper_keywords.keyword_id
-              INNER JOIN desci.categories ON papers.category_id = desci.categories.id
-              INNER JOIN desci.fields ON categories.field_id = desci.fields.id
+              FROM desci.papers AS papers
+              INNER JOIN desci.users AS users ON users.id = papers.user_id
+              LEFT JOIN desci.paper_keywords AS paper_keywords ON paper_keywords.paper_id = papers.id
+              LEFT JOIN desci.keywords AS keywords ON keywords.id = paper_keywords.keyword_id
+              INNER JOIN desci.categories AS categories ON categories.id = papers.category_id
+              INNER JOIN desci.fields AS fields ON fields.id = categories.field_id
           `;
 
     if (fieldId) {
@@ -211,8 +213,8 @@ export class PapersController {
       conditions.push(sql`(
               papers.title ILIKE ${"%" + search.toLowerCase() + "%"} OR
               papers.abstract ILIKE ${"%" + search.toLowerCase() + "%"} OR
-              desci.fields.name ILIKE ${"%" + search.toLowerCase() + "%"} OR
-              desci.categories.name ILIKE ${"%" + search.toLowerCase() + "%"}
+              fields.name ILIKE ${"%" + search.toLowerCase() + "%"} OR
+              categories.name ILIKE ${"%" + search.toLowerCase() + "%"}
             )`);
     }
 
@@ -260,7 +262,7 @@ export class PapersController {
 
     finalQuery = sql`
             ${finalQuery}
-            GROUP BY papers.id, users.id
+            GROUP BY papers.id, users.id, categories.id
             ORDER BY papers.created_at DESC
             LIMIT ${limit}
             OFFSET ${offset}
@@ -278,7 +280,7 @@ export class PapersController {
       countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
     }
 
-    const papersResults = await db.execute(finalQuery);
+    const papersResults = await db.execute<Paper>(finalQuery);
     const [{ total }] = await db.execute(countQuery);
 
     const totalCount = parseInt(String(total), 10);
@@ -296,7 +298,7 @@ export class PapersController {
       },
     });
 
-    const response = {
+    const response: PaginatedPapersResponse = {
       data: papersResults,
       next_page,
       prev_page,
