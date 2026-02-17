@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import type { NextFunction, Request, Response } from "express";
+import type { Request, Response } from "express";
 import {
   fetchPapersQueryParams,
   getPaperSchema,
@@ -23,6 +23,7 @@ import slug from "slug";
 import { createKeyword } from "../../modules/keywords/service";
 import { ipfsService } from "../../utils/ipfs";
 import { buildOffsetPaginationLinks } from "../../utils/paginator";
+import { PaginatedPapersResponse, Paper } from "./types";
 
 export class PapersController {
   public create = async (req: MulterRequest, res: Response) => {
@@ -82,7 +83,7 @@ export class PapersController {
       });
     }
 
-    const keywordIdsToMapToPaper: Set<number> = new Set(
+    const keywordIdsToMapToPaper = new Set(
       keywordIdsInDB.map(({ id }) => id),
     );
 
@@ -108,11 +109,18 @@ export class PapersController {
 
     const fileBlob = new Blob([fs.readFileSync(file.path)]);
 
-    // Pinata upload should be reverted if DB operation fails.
-    // Wrap paperCreation in try catch.
-    const ipfsResponse = await ipfsService.uploadFile(
-      new File([fileBlob], file.originalname, { type: file.mimetype }),
-    );
+    let paperCid = null;
+    try {
+      const ipfsResponse = await ipfsService.uploadFile(
+        new File([fileBlob], file.originalname, { type: file.mimetype }),
+      );
+      paperCid = ipfsResponse.cid;
+    } catch (error) {
+      req.ctx.set("error", error);
+      return res
+        .status(500)
+        .json({ error: "An error occurred while uploading paper" });
+    }
 
     const createdPaper = await db.transaction(async (tx) => {
       const paperSlug = slug(`${body.title.substring(0, 75)} ${Date.now()}`);
@@ -124,8 +132,8 @@ export class PapersController {
           abstract: body.abstract,
           categoryId: body.categoryId,
           notes: body.notes,
-          ipfsCid: ipfsResponse.cid,
-          ipfsUrl: `https://${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`,
+          ipfsCid: paperCid,
+          ipfsUrl: `https://${process.env.PINATA_GATEWAY}/ipfs/${paperCid}`,
           userId,
           status: "pending",
         })
@@ -178,14 +186,15 @@ export class PapersController {
                 papers.created_at AS "createdAt",
                 papers.updated_at AS "updatedAt",
                 papers.category_id AS "categoryId",
+                json_build_object('id', categories.id, 'name', categories.name, 'fieldId', categories.field_id) AS category,
                 json_build_object('id', users.id, 'name', users.name, 'email', users.email) AS user,
                 json_agg(json_build_object('id', keywords.id, 'name', keywords.name, 'aliases', keywords.aliases)) FILTER (WHERE keywords.id IS NOT NULL) AS keywords
-              FROM desci.papers as papers
-              INNER JOIN desci.users as users ON papers.user_id = users.id
-              LEFT JOIN desci.paper_keywords as paper_keywords ON papers.id = paper_keywords.paper_id
-              LEFT JOIN desci.keywords as keywords ON keywords.id = paper_keywords.keyword_id
-              INNER JOIN desci.categories ON papers.category_id = desci.categories.id
-              INNER JOIN desci.fields ON categories.field_id = desci.fields.id
+              FROM desci.papers AS papers
+              INNER JOIN desci.users AS users ON users.id = papers.user_id
+              LEFT JOIN desci.paper_keywords AS paper_keywords ON paper_keywords.paper_id = papers.id
+              LEFT JOIN desci.keywords AS keywords ON keywords.id = paper_keywords.keyword_id
+              INNER JOIN desci.categories AS categories ON categories.id = papers.category_id
+              INNER JOIN desci.fields AS fields ON fields.id = categories.field_id
           `;
 
     if (fieldId) {
@@ -204,31 +213,45 @@ export class PapersController {
       conditions.push(sql`(
               papers.title ILIKE ${"%" + search.toLowerCase() + "%"} OR
               papers.abstract ILIKE ${"%" + search.toLowerCase() + "%"} OR
-              desci.fields.name ILIKE ${"%" + search.toLowerCase() + "%"} OR
-              desci.categories.name ILIKE ${"%" + search.toLowerCase() + "%"}
+              fields.name ILIKE ${"%" + search.toLowerCase() + "%"} OR
+              categories.name ILIKE ${"%" + search.toLowerCase() + "%"}
             )`);
     }
 
     const DEFAULT_VIEWABLE_PAPER_STATUS = "published";
 
-    const isAuthenticatedUser = !!req.user;
     const isAdmin = !!req.admin;
 
-    if (!isAuthenticatedUser && !isAdmin) {
-      // Anonymous or non-privileged user: only show published papers
-      conditions.push(sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`);
+    if (req.user) {
+      if (userId) {
+        if (req.user.id !== userId && !isAdmin) {
+          // Authenticated user requesting papers of another user without admin access: only show published papers
+          conditions.push(sql`papers.user_id = ${userId}`);
+          conditions.push(
+            sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`,
+          );
+        } else {
+          // Authenticated user requesting their own papers: can filter by status or see all their papers
+          if (status) {
+            conditions.push(sql`papers.user_id = ${userId}`);
+            conditions.push(sql`papers.status = ${status}`);
+          } else {
+            req.log.info("User requesting all their papers");
+            conditions.push(sql`papers.user_id = ${userId}`);
+          }
+        }
+      }
     } else if (req.admin && status) {
       // Admin: can filter all papers by status
       conditions.push(sql`papers.status = ${status}`);
-    } else if (req.user && status) {
-      // Authenticated user requesting a specific status: filter their own papers
-      conditions.push(sql`papers.user_id = ${req.user.id}`);
-      conditions.push(sql`papers.status = ${status}`);
-    } else if (req.user && !status) {
-      // Authenticated user without specific status or admin access: show all papers
-      conditions.push(
-        sql`papers.status IN ('pending', 'published', 'rejected')`,
+    } else if (req.admin) {
+      // Admin without status filter: can see all papers
+      conditions = conditions.filter(
+        (condition) => !String(condition).includes("papers.status"),
       );
+    } else {
+      // Unauthenticated user: only show published papers
+      conditions.push(sql`papers.status = ${DEFAULT_VIEWABLE_PAPER_STATUS}`);
     }
 
     // Build final query with conditions
@@ -239,7 +262,7 @@ export class PapersController {
 
     finalQuery = sql`
             ${finalQuery}
-            GROUP BY papers.id, users.id
+            GROUP BY papers.id, users.id, categories.id
             ORDER BY papers.created_at DESC
             LIMIT ${limit}
             OFFSET ${offset}
@@ -257,7 +280,7 @@ export class PapersController {
       countQuery = sql`${countQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
     }
 
-    const papersResults = await db.execute(finalQuery);
+    const papersResults = await db.execute<Paper>(finalQuery);
     const [{ total }] = await db.execute(countQuery);
 
     const totalCount = parseInt(String(total), 10);
@@ -275,7 +298,7 @@ export class PapersController {
       },
     });
 
-    const response = {
+    const response: PaginatedPapersResponse = {
       data: papersResults,
       next_page,
       prev_page,
@@ -308,7 +331,7 @@ export class PapersController {
 
     if (!req.admin && existingPaper.userId !== req.user!.id) {
       return res.status(403).json({
-        error: "You don't have permission to update this paper",
+        error: "Forbidden request",
       });
     }
 
@@ -405,15 +428,24 @@ export class PapersController {
       }
       const fileBlob = new Blob([fs.readFileSync(req.file.path)]);
 
-      const ipfsResponse = await ipfsService.uploadFile(
-        new File([fileBlob], req.file.originalname, {
-          type: req.file.mimetype,
-        }),
-      );
+      let paperCid: string | null = null;
+      try {
+        const ipfsResponse = await ipfsService.uploadFile(
+          new File([fileBlob], req.file.originalname, {
+            type: req.file.mimetype,
+          }),
+        );
+        paperCid = ipfsResponse.cid;
+      } catch (error) {
+        req.ctx.set("error", error);
+        return res
+          .status(500)
+          .json({ error: "An error occurred while uploading PDF" });
+      }
 
-      updatePayload["ipfsCid"] = ipfsResponse.cid;
+      updatePayload["ipfsCid"] = paperCid;
       updatePayload["ipfsUrl"] =
-        `${process.env.PINATA_GATEWAY}/ipfs/${ipfsResponse.cid}`;
+        `${process.env.PINATA_GATEWAY}/ipfs/${paperCid}`;
 
       // delete the previous file by CID
       await ipfsService.deleteFilesByCid([existingPaper.ipfsCid]);
@@ -540,6 +572,7 @@ export class PapersController {
       .select({
         id: papersTable.id,
         title: papersTable.title,
+        slug: papersTable.slug,
         abstract: papersTable.abstract,
         notes: papersTable.notes,
         status: papersTable.status,
@@ -586,7 +619,7 @@ export class PapersController {
       )
       .where(
         and(
-          // Only show 'published' papers unless the requester is the owner (can see their 'pending' and 'published')
+          // only show 'published' papers by default. Show pending papers if the requester is the owner
           req.user
             ? and(
                 eq(papersTable.userId, req.user.id),
@@ -635,9 +668,8 @@ export class PapersController {
       });
     }
 
-    // TODO: Allow admins to delete papers
-    if (existingPaper.userId != req.user!.id) {
-      return res.status(404).json({ error: "Paper not found" });
+    if (!req.admin && existingPaper.userId !== req.user!.id) {
+      return res.status(403).json({ error: "Forbidden request" });
     }
 
     await db.transaction(async (tx) => {
@@ -651,7 +683,11 @@ export class PapersController {
     const ipfsFile = await ipfsService.getFileByCid(existingPaper.ipfsCid);
 
     if (ipfsFile) {
-      const ipfsResponse = await ipfsService.deleteFilesByCid([ipfsFile.id]);
+      try {
+        await ipfsService.deleteFilesByCid([ipfsFile.id]);
+      } catch (error) {
+        // no-op: the IpfsService logs failed operations
+      }
     }
 
     return res.status(200).json({

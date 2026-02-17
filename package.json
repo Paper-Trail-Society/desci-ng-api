@@ -29,7 +29,8 @@
     "index-papers": "node dist/scripts/index-papers.js",
     "db:check": "node dist/scripts/check-schema.js",
     "db:seed": "node dist/scripts/seed.js",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "test": "vitest --run"
   },
   "keywords": [
     "academia",

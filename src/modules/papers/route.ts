@@ -11,6 +11,7 @@ import {
 import z from "zod";
 import { authMiddleware } from "../../middlewares/auth";
 import { adminAuthMiddleware } from "../../middlewares/auth/admin-auth";
+import ApiError from "../../utils/api-error";
 
 export const papersRouter = Router();
 const papersController = new PapersController();
@@ -22,7 +23,7 @@ const upload = multer({
   limits: { fileSize: MAX_FILE_SIZE },
   fileFilter: (req, file, cb) => {
     if (file.mimetype !== "application/pdf") {
-      return cb(new Error("Only PDF file type is allowed!"));
+      return cb(new ApiError("Only PDF file type is allowed!", 400));
     }
 
     cb(null, true);
@@ -52,11 +53,10 @@ papersRouter.get(
   papersController.getPaperByIdOrSlug,
 );
 
-// need to merge optional admin auth and required user auth middleware for this route
 papersRouter.put(
   "/papers/:id",
   adminAuthMiddleware({ optional: true }),
-  authMiddleware,
+  authMiddleware({}),
   validateRequest(
     "params",
     z.object({ id: z.preprocess((v) => Number(v), z.number()) }),
