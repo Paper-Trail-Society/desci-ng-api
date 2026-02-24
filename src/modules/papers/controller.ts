@@ -619,11 +619,16 @@ export class PapersController {
       )
       .where(
         and(
-          // only show 'published' papers by default. Show pending papers if the requester is the owner
+          // Only show published papers by default.
+          // For authenticated users, allow any published paper,
+          // but only allow pending papers if the requester is the owner.
           req.user
-            ? and(
-                eq(papersTable.userId, req.user.id),
-                inArray(papersTable.status, ["pending", "published"]),
+            ? or(
+                eq(papersTable.status, "published"),
+                and(
+                  eq(papersTable.status, "pending"),
+                  eq(papersTable.userId, req.user.id),
+                ),
               )
             : eq(papersTable.status, "published"),
           or(

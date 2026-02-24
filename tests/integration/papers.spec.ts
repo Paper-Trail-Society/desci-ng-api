@@ -597,6 +597,56 @@ describe("GET /papers/:id", () => {
     expect(res.body).toHaveProperty("status", "published");
   });
 
+  it("allow authenticated users to fetch any published paper by ID", async ({
+    expect,
+  }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const paper = await PaperFactory.create({
+      status: "published",
+      userId: testUser.id,
+    });
+
+    const testUser2 = await UserFactory.create({
+      email: "test2@example.com",
+    });
+
+    const res = await api
+      .get(`/papers/${paper.id}`)
+      .set("Authorization", `Bearer ${testUser2.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(res.body).toHaveProperty("id", paper.id);
+    expect(res.body).toHaveProperty("status", "published");
+  });
+
+  it("allow authenticated users to fetch any published paper by slug", async ({
+    expect,
+  }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const paper = await PaperFactory.create({
+      status: "published",
+      userId: testUser.id,
+    });
+
+    const testUser2 = await UserFactory.create({
+      email: "test2@example.com",
+    });
+
+    const res = await api
+      .get(`/papers/${paper.slug}`)
+      .set("Authorization", `Bearer ${testUser2.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(res.body).toHaveProperty("id", paper.id);
+    expect(res.body).toHaveProperty("status", "published");
+  });
+
   it("does not allow anonymous users to fetch non-published papers", async ({
     expect,
   }) => {
