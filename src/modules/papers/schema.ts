@@ -1,5 +1,7 @@
 import z from "zod";
 
+export const MAX_COMMENT_LENGTH = 2000;
+
 export const uploadPaper = z.object({
   title: z.string(),
   abstract: z.string(),
@@ -39,4 +41,24 @@ export const updatePaper = z.object({
 
 export const getPaperSchema = z.object({
   id: z.string(),
+});
+
+export const createPaperCommentSchema = z.object({
+  body: z
+    .string()
+    .transform((value) => value.trim())
+    .refine((value) => value.length > 0, {
+      message: "Comment body cannot be empty",
+    })
+    .refine((value) => value.length <= MAX_COMMENT_LENGTH, {
+      message: `Comment body must be at most ${MAX_COMMENT_LENGTH} characters long`,
+    }),
+  parentCommentId: z
+    .preprocess((v) =>
+      v === undefined || v === null || v === "" ? undefined : Number(v), z.number().int().positive())
+    .optional(),
+});
+
+export const getPaperCommentsParamsSchema = z.object({
+  paperId: z.preprocess((v) => Number(v), z.number()),
 });

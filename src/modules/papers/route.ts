@@ -12,9 +12,10 @@ import z from "zod";
 import { authMiddleware } from "../../middlewares/auth";
 import { adminAuthMiddleware } from "../../middlewares/auth/admin-auth";
 import ApiError from "../../utils/api-error";
+import { PapersRepository } from "./repository";
 
 export const papersRouter = Router();
-const papersController = new PapersController();
+const papersController = new PapersController(new PapersRepository());
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -74,4 +75,18 @@ papersRouter.delete(
     z.object({ id: z.preprocess((v) => Number(v), z.number()) }),
   ),
   papersController.delete,
+);
+
+papersRouter.post(
+  "/papers/:paperId/comments",
+  authMiddleware({}),
+  validateRequest("params", z.object({ paperId: z.preprocess((v) => Number(v), z.number()) })),
+  validateRequest("body", uploadPaper.extend({})), // placeholder to satisfy middleware types
+  papersController.createComment,
+);
+
+papersRouter.get(
+  "/papers/:paperId/comments",
+  validateRequest("params", z.object({ paperId: z.preprocess((v) => Number(v), z.number()) })),
+  papersController.listComments,
 );

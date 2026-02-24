@@ -46,9 +46,27 @@ export interface Paper extends Record<string, unknown> {
 }
 
 export type PaginatedPapersResponse = {
-    data: Paper[]
-    prev_page: string | null
-    next_page: string | null
-    total: number
-    size: number
+  data: Paper[];
+  prev_page: string | null;
+  next_page: string | null;
+  total: number;
+  size: number;
+};
+
+export interface PaperCommentAuthor {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface PaperComment {
+  id: number;
+  paperId: number;
+  authorId: string;
+  parentCommentId: number | null;
+  bodyMarkdown: string;
+  bodyHtml: string;
+  createdAt: string;
+  updatedAt: string;
+  author: PaperCommentAuthor;
 }
