@@ -1,4 +1,3 @@
-
 import { readFileSync } from "fs";
 import { join } from "path";
 import Handlebars from "handlebars";
@@ -10,7 +9,7 @@ import { db } from "../config/db";
 import { logger } from "../config/logger";
 import { mailService } from "./email/mail-service";
 
-const authLogger = logger.child({ origin: "auth", });
+const authLogger = logger.child({ origin: "auth" });
 
 export const auth = betterAuth({
   appName: "Nubian",
@@ -27,12 +26,15 @@ export const auth = betterAuth({
   trustedOrigins: (process.env.BETTER_AUTH_TRUSTED_ORIGINS || "")
     .split(",")
     .filter(Boolean),
+
   advanced: {
     cookiePrefix: "nubianresearch",
-    crossSubDomainCookies: {
-      enabled: true,
-      domain: "nubianresearch.com",
-    },
+    ...(process.env.NODE_ENV === "production" && {
+      crossSubDomainCookies: {
+        enabled: true,
+        domain: "nubianresearch.com",
+      },
+    }),
   },
   rateLimit: {
     enabled: false,
@@ -153,6 +155,9 @@ const sendVerificationEmail = async ({
       },
     });
   } catch (error) {
-    authLogger.error(error, `Failed to send verification email to ${user.email}:`);
+    authLogger.error(
+      error,
+      `Failed to send verification email to ${user.email}:`,
+    );
   }
 };
