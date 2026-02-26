@@ -4,9 +4,6 @@ import { logger } from "./config/logger";
 
 const port = process.env.PORT || 3000;
 
-// Only start the HTTP server when not running tests.
-// Vitest sets NODE_ENV to "test", so importing this module
-// in tests will not attempt to bind to a TCP port.
 app.listen(port, (error) => {
   if (error) {
     logger.error(error, "An error occured while starting API server");
