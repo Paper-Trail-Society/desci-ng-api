@@ -1,12 +1,13 @@
 import "dotenv/config";
 import request from "supertest";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import app from "../../src/app";
 import { DatabaseSeeder } from "../setup/database-seeder";
 import { PaperFactory } from "../factories/paper-factory";
 import { UserFactory } from "../factories/user-factory";
 import { CategoryFactory } from "../factories/field-factory";
 import { ipfsService } from "../../src/utils/ipfs";
+import { PaperCommentFactory } from "../factories/paper-comment-factory";
 
 const TEST_CID = "mock-cid";
 const TEST_PDF_BUFFER = Buffer.from("%PDF-1.4 Test PDF content");
@@ -170,9 +171,7 @@ describe("GET /papers", () => {
     expect(Array.isArray(firstPageRes.body.data)).toBe(true);
     expect(firstPageRes.body.data).toHaveLength(10);
     expect(firstPageRes.body.prev_page).toBeNull();
-    expect(firstPageRes.body.next_page).toEqual(
-      "/papers?page=2&size=10",
-    );
+    expect(firstPageRes.body.next_page).toEqual("/papers?page=2&size=10");
 
     const secondPageRes = await api
       .get("/papers")
@@ -184,9 +183,7 @@ describe("GET /papers", () => {
     expect(secondPageRes.body).toHaveProperty("size", 10);
     expect(Array.isArray(secondPageRes.body.data)).toBe(true);
     expect(secondPageRes.body.data).toHaveLength(5);
-    expect(secondPageRes.body.prev_page).toEqual(
-      "/papers?page=1&size=10",
-    );
+    expect(secondPageRes.body.prev_page).toEqual("/papers?page=1&size=10");
     expect(secondPageRes.body.next_page).toBeNull();
   });
 
@@ -415,7 +412,9 @@ describe("POST /papers", () => {
       .expect(400);
   });
 
-  it("returns 400 when required fields are missing in request payload", async ({ expect }) => {
+  it("returns 400 when required fields are missing in request payload", async ({
+    expect,
+  }) => {
     const testUser = await UserFactory.create({
       email: "test@example.com",
     });
@@ -426,10 +425,12 @@ describe("POST /papers", () => {
       .expect("Content-Type", /json/)
       .expect(400);
 
-      expect(res.body).toHaveProperty("errors");
-  })
+    expect(res.body).toHaveProperty("errors");
+  });
 
-  it("returns 400 when the PDF file is not of the correct mime type (PDF)", async ({ expect }) => {
+  it("returns 400 when the PDF file is not of the correct mime type (PDF)", async ({
+    expect,
+  }) => {
     const testUser = await UserFactory.create({
       email: "test@example.com",
     });
@@ -443,8 +444,7 @@ describe("POST /papers", () => {
       })
       .expect("Content-Type", /json/)
       .expect(400);
-
-  })
+  });
 
   it("returns 400 when an invalid category ID is passed", async ({
     expect,
@@ -472,7 +472,6 @@ describe("POST /papers", () => {
       `Invalid category ID: ${invalidCategoryId}`,
     );
   });
-
 
   it("creates paper successfully", async ({ expect }) => {
     const testUser = await UserFactory.create({
@@ -555,7 +554,6 @@ describe("POST /papers", () => {
     expect(secondPaperSlug).not.toBe(firstPaperSlug);
     expect(ipfsService.uploadFile).toHaveBeenCalled();
   });
-
 });
 
 describe("GET /papers/:id", () => {
@@ -705,7 +703,6 @@ describe("GET /papers/:id", () => {
   });
 });
 
-
 describe("PUT /papers/:id", () => {
   it("requires authentication", async ({ expect }) => {
     const res = await api
@@ -755,7 +752,9 @@ describe("PUT /papers/:id", () => {
     expect(res.body).toHaveProperty("id", paper.id);
   });
 
-  it("does not allow users to update papers that aren't theirs", async ({ expect }) => {
+  it("does not allow users to update papers that aren't theirs", async ({
+    expect,
+  }) => {
     const testUser1 = await UserFactory.create({
       email: "test1@example.com",
     });
@@ -780,7 +779,7 @@ describe("PUT /papers/:id", () => {
 
     expect(res.body).toHaveProperty("error", "Forbidden request");
   });
-});    
+});
 
 describe("DELETE /papers/:id", () => {
   it("requires authentication", async ({ expect }) => {
@@ -822,12 +821,17 @@ describe("DELETE /papers/:id", () => {
       .set("Authorization", `Bearer ${testUser.authToken}`)
       .expect("Content-Type", /json/)
       .expect(200);
-    
+
     expect(ipfsService.deleteFilesByCid).toHaveBeenCalled();
-    expect(res.body).toHaveProperty("message", `'${paper.title}' paper deleted successfully`);
+    expect(res.body).toHaveProperty(
+      "message",
+      `'${paper.title}' paper deleted successfully`,
+    );
   });
 
-  it("does not allow users to delete papers that aren't theirs", async ({ expect }) => {
+  it("does not allow users to delete papers that aren't theirs", async ({
+    expect,
+  }) => {
     const testUser1 = await UserFactory.create({
       email: "test1@example.com",
     });
@@ -846,5 +850,161 @@ describe("DELETE /papers/:id", () => {
       .expect(403);
 
     expect(res.body).toHaveProperty("error", "Forbidden request");
+  });
+});
+
+describe("POST /papers/{paperId}/comments", () => {
+  it("should return 404 when creating a comment on a non-existing paper", async ({
+    expect,
+  }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const res = await api
+      .post("/papers/23429/comments")
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .field("body", "This is a comment")
+      .expect("Content-Type", /json/)
+      .expect(400);
+  });
+
+  it("should return 403 when an author is tries to comment on their unpublished paper", async ({
+    expect,
+  }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({
+      status: "pending",
+      userId: testUser.id,
+    });
+
+    const commentBody = "This is a comment";
+
+    const res = await api
+      .post(`/papers/${testPaper.id}/comments`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .send({ body: commentBody })
+      .expect("Content-Type", /json/)
+      .expect(403);
+  });
+
+  it("should return 404 when a user tries to comment on an unpublished paper by another author", async ({
+    expect,
+  }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({ status: "pending" });
+
+    const commentBody = "This is a comment";
+
+    const res = await api
+      .post(`/papers/${testPaper.id}/comments`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .send({ body: commentBody })
+      .expect("Content-Type", /json/)
+      .expect(404);
+  });
+
+  it("should return 400 when creating a comment on an empty request body", async ({
+    expect,
+  }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({ status: "published" });
+
+    const res = await api
+      .post(`/papers/${testPaper.id}/comments`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(400);
+  });
+
+  it("should return 400 when creating a comment on an empty `body` field", async ({
+    expect,
+  }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({ status: "published" });
+
+    const res = await api
+      .post(`/papers/${testPaper.id}/comments`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .field("body", "       ")
+      .expect("Content-Type", /json/)
+      .expect(400);
+  });
+
+  it("should comment on a paper successfully", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({ status: "published" });
+
+    const commentBody = "This is a comment";
+
+    const res = await api
+      .post(`/papers/${testPaper.id}/comments`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .send({ body: commentBody })
+      .expect("Content-Type", /json/)
+      .expect(201);
+
+    expect(res.body).toHaveProperty("bodyMarkdown", commentBody);
+    expect(res.body).toHaveProperty("bodyHtml", `<p>${commentBody}</p>\n`);
+    expect(res.body).toHaveProperty("authorId", testUser.id);
+    expect(res.body).toHaveProperty("paperId", testPaper.id);
+  });
+
+  it("should return 400 when a comment is replying to a non-existing comment", async ({
+    expect,
+  }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({ status: "published" });
+
+    const commentBody = "This is a comment";
+
+    const res = await api
+      .post(`/papers/${testPaper.id}/comments`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .send({ body: commentBody, parentCommentId: 400 })
+      .expect("Content-Type", /json/)
+      .expect(400);
+
+    expect(res.body).toHaveProperty("error");
+  });
+
+  it("should reply a comment successfully", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({ status: "published" });
+    const paperCommentFactory = new PaperCommentFactory();
+    const testComment = await paperCommentFactory.create({
+      body: "This is a test comment",
+      paperId: testPaper.id,
+      authorId: testUser.id,
+      parentCommentId: null,
+    });
+
+    const commentBody = "This is a comment";
+
+    const res = await api
+      .post(`/papers/${testPaper.id}/comments`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .send({ body: commentBody, parentCommentId: testComment.id })
+      .expect("Content-Type", /json/)
+      .expect(201);
+
+    expect(res.body).toHaveProperty("parentCommentId", testComment.id);
+    expect(res.body).toHaveProperty("bodyMarkdown", commentBody);
+    expect(res.body).toHaveProperty("bodyHtml", `<p>${commentBody}</p>\n`);
+    expect(res.body).toHaveProperty("authorId", testUser.id);
+    expect(res.body).toHaveProperty("paperId", testPaper.id);
   });
 });
