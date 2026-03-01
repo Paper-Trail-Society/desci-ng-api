@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -212,25 +213,28 @@ export const paperKeywordsTable = desciSchema.table(
   ],
 );
 
-export const paperCommentsTable = desciSchema.table("paper_comments", {
-  id: serial("id").primaryKey(),
-  paperId: integer("paper_id")
-    .notNull()
-    .references(() => papersTable.id, { onDelete: "cascade" }),
-  authorId: text("author_id")
-    .notNull()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
-  parentCommentId: integer("parent_comment_id").references(
-    (d) => paperCommentsTable.id,
-    { onDelete: "cascade" },
-  ),
-  bodyMarkdown: varchar("body_markdown", { length: 2000 }).notNull(),
-  bodyHtml: text("body_html").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const paperCommentsTable = desciSchema.table(
+  "paper_comments",
+  {
+    id: serial("id").primaryKey(),
+    paperId: integer("paper_id")
+      .notNull()
+      .references(() => papersTable.id, { onDelete: "cascade" }),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    parentCommentId: integer("parent_comment_id"),
+    bodyMarkdown: varchar("body_markdown", { length: 2000 }).notNull(),
+    bodyHtml: text("body_html").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (self) => [
+    foreignKey({ columns: [self.parentCommentId], foreignColumns: [self.id] }),
+  ],
+);
 
 export const keywordsTable = desciSchema.table(
   "keywords",
