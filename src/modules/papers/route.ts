@@ -7,6 +7,7 @@ import {
   fetchPapersQueryParams,
   updatePaper,
   getPaperSchema,
+  createPaperCommentSchema,
 } from "./schema";
 import z from "zod";
 import { authMiddleware } from "../../middlewares/auth";
@@ -81,7 +82,7 @@ papersRouter.post(
   "/papers/:paperId/comments",
   authMiddleware({}),
   validateRequest("params", z.object({ paperId: z.preprocess((v) => Number(v), z.number()) })),
-  validateRequest("body", uploadPaper.extend({})), // placeholder to satisfy middleware types
+  validateRequest("body", createPaperCommentSchema),
   papersController.createComment,
 );
 

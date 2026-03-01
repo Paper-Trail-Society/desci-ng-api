@@ -66,7 +66,7 @@ export interface PaperComment {
   parentCommentId: number | null;
   bodyMarkdown: string;
   bodyHtml: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt: Date;
   author: PaperCommentAuthor;
 }

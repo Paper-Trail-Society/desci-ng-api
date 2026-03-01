@@ -95,9 +95,7 @@ export class PapersController {
       });
     }
 
-    const keywordIdsToMapToPaper = new Set(
-      keywordIdsInDB.map(({ id }) => id),
-    );
+    const keywordIdsToMapToPaper = new Set(keywordIdsInDB.map(({ id }) => id));
 
     for (const keyword of body.newKeywords) {
       const existingKeyword = await db
@@ -725,6 +723,18 @@ export class PapersController {
     const paper = await this.papersRepository.findPaperById(paperId);
 
     if (!paper) {
+      return res.status(404).json({
+        error: "Paper not found",
+      });
+    }
+
+    if (paper.status !== "published") {
+      // if the commenter is the author of the paper
+      if (req.user && req.user.id == paper.userId) {
+        return res.status(403).json({
+          error: "Cannot comment on unpublished paper",
+        });
+      }
       return res.status(404).json({
         error: "Paper not found",
       });

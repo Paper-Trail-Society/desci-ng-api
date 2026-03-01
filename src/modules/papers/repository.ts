@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "../../config/db";
 import {
   papersTable,
@@ -53,7 +53,7 @@ export class PapersRepository {
     bodyMarkdown: string;
     bodyHtml: string;
   }) => {
-    const [inserted] = await db
+    const [comment] = await db
       .insert(paperCommentsTable)
       .values({
         paperId: params.paperId,
@@ -62,32 +62,11 @@ export class PapersRepository {
         bodyMarkdown: params.bodyMarkdown,
         bodyHtml: params.bodyHtml,
       })
-      .returning({ id: paperCommentsTable.id })
+      .returning()
       .execute();
 
-    const [comment] = await db
-      .select({
-        id: paperCommentsTable.id,
-        paperId: paperCommentsTable.paperId,
-        authorId: paperCommentsTable.authorId,
-        parentCommentId: paperCommentsTable.parentCommentId,
-        bodyMarkdown: paperCommentsTable.bodyMarkdown,
-        bodyHtml: paperCommentsTable.bodyHtml,
-        createdAt: paperCommentsTable.createdAt,
-        updatedAt: paperCommentsTable.updatedAt,
-        author: {
-          id: usersTable.id,
-          name: usersTable.name,
-          email: usersTable.email,
-        },
-      })
-      .from(paperCommentsTable)
-      .innerJoin(usersTable, eq(usersTable.id, paperCommentsTable.authorId))
-      .where(eq(paperCommentsTable.id, inserted.id))
-      .limit(1)
-      .execute();
 
-    return comment as PaperComment;
+    return comment;
   };
 
   public listCommentsForPaper = async (paperId: number) => {
@@ -132,7 +111,7 @@ export class PapersRepository {
         and(
           eq(paperCommentsTable.id, commentId),
           eq(paperCommentsTable.paperId, paperId),
-          eq(paperCommentsTable.parentCommentId, null),
+          isNull(paperCommentsTable.parentCommentId),
         ),
       )
       .limit(1)
