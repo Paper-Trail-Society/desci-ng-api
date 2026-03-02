@@ -71,6 +71,13 @@
       "when": 1769595281784,
       "tag": "0009_lovely_rockslide",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1772270789963,
+      "tag": "0010_windy_absorbing_man",
+      "breakpoints": true
     }
   ]
 }

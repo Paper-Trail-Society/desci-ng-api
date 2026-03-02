@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -212,6 +213,29 @@ export const paperKeywordsTable = desciSchema.table(
   ],
 );
 
+export const paperCommentsTable = desciSchema.table(
+  "paper_comments",
+  {
+    id: serial("id").primaryKey(),
+    paperId: integer("paper_id")
+      .notNull()
+      .references(() => papersTable.id, { onDelete: "cascade" }),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    parentCommentId: integer("parent_comment_id"),
+    bodyMarkdown: varchar("body_markdown", { length: 2000 }).notNull(),
+    bodyHtml: text("body_html").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (self) => [
+    foreignKey({ columns: [self.parentCommentId], foreignColumns: [self.id] }),
+  ],
+);
+
 export const keywordsTable = desciSchema.table(
   "keywords",
   {
@@ -298,6 +322,9 @@ export type UpdatePaper = Omit<
   "id" | "createdAt" | "updatedAt" | "deletedAt" | "slug"
 >;
 export type SelectPaper = typeof papersTable.$inferSelect;
+
+export type InsertPaperComment = typeof paperCommentsTable.$inferInsert;
+export type SelectPaperComment = typeof paperCommentsTable.$inferSelect;
 
 export type InsertInstitution = typeof institutionsTable.$inferInsert;
 export type SelectInstitution = typeof institutionsTable.$inferSelect;

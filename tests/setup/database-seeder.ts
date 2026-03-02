@@ -10,6 +10,7 @@ export class DatabaseSeeder {
   static async reset() {
     await db.execute(sql`
       TRUNCATE TABLE
+        desci.paper_comments,
         desci.paper_keywords,
         desci.papers,
         desci.keywords,

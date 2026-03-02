@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import {
   fetchPapersQueryParams,
   getPaperSchema,
+  paperIdInPath,
   updatePaper,
   uploadPaper,
 } from "./schema";
@@ -24,8 +25,20 @@ import { createKeyword } from "../../modules/keywords/service";
 import { ipfsService } from "../../utils/ipfs";
 import { buildOffsetPaginationLinks } from "../../utils/paginator";
 import { PaginatedPapersResponse, Paper } from "./types";
+import {
+  createPaperCommentSchema,
+  getPaperCommentsParamsSchema,
+} from "./schema";
+import { PapersRepository } from "./repository";
+import { renderCommentBody } from "./service";
 
 export class PapersController {
+  private readonly papersRepository: PapersRepository;
+
+  public constructor(papersRepository: PapersRepository) {
+    this.papersRepository = papersRepository;
+  }
+
   public create = async (req: MulterRequest, res: Response) => {
     const body = uploadPaper.parse(req.body);
 
@@ -83,9 +96,7 @@ export class PapersController {
       });
     }
 
-    const keywordIdsToMapToPaper = new Set(
-      keywordIdsInDB.map(({ id }) => id),
-    );
+    const keywordIdsToMapToPaper = new Set(keywordIdsInDB.map(({ id }) => id));
 
     for (const keyword of body.newKeywords) {
       const existingKeyword = await db
@@ -697,6 +708,96 @@ export class PapersController {
 
     return res.status(200).json({
       message: `'${existingPaper.title}' paper deleted successfully`,
+    });
+  };
+
+  public createComment = async (req: Request, res: Response) => {
+    const { paperId } = paperIdInPath.parse(req.params);
+    const { body, parentCommentId } = createPaperCommentSchema.parse(req.body);
+
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Authentication required. Please sign in to continue.",
+      });
+    }
+
+    const paper = await this.papersRepository.findPaperById(paperId);
+
+    if (!paper) {
+      return res.status(404).json({
+        error: "Paper not found",
+      });
+    }
+
+    if (paper.status !== "published") {
+      // if the commenter is the author of the paper
+      if (req.user && req.user.id == paper.userId) {
+        return res.status(403).json({
+          error: "Cannot comment on unpublished paper",
+        });
+      }
+      return res.status(404).json({
+        error: "Paper not found",
+      });
+    }
+
+    if (parentCommentId !== undefined) {
+      const isTopLevelCommentOnPaper =
+        await this.papersRepository.doesTopLevelCommentBelongToPaper(
+          parentCommentId,
+          paperId,
+        );
+
+      if (!isTopLevelCommentOnPaper) {
+        return res.status(400).json({
+          error:
+            "Invalid parent comment. Replies are only allowed on top-level comments for this paper.",
+        });
+      }
+    }
+
+    const { bodyMarkdown, bodyHtml } = renderCommentBody(body);
+
+    const comment = await this.papersRepository.createComment({
+      paperId,
+      authorId: req.user.id,
+      parentCommentId: parentCommentId ?? null,
+      bodyMarkdown,
+      bodyHtml,
+    });
+
+    return res.status(201).json(comment);
+  };
+
+  public listComments = async (req: Request, res: Response) => {
+    const { paperId } = paperIdInPath.parse(req.params);
+    const { limit, cursor, sortDir } = getPaperCommentsParamsSchema.parse(
+      req.query,
+    );
+
+    const paper = await this.papersRepository.findPaperById(paperId);
+
+    if (!paper) {
+      return res.status(404).json({
+        error: "Paper not found",
+      });
+    }
+
+    const { hasMore, comments, nextCursor } =
+      await this.papersRepository.listCommentsForPaper({
+        paperId,
+        limit,
+        cursor,
+        ...(sortDir && { sort: { dir: sortDir } }),
+      });
+
+    return res.status(200).json({
+      data: comments,
+      meta: {
+        hasMore,
+        nextCursor,
+        limit,
+      },
     });
   };
 }
