@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import {
   fetchPapersQueryParams,
   getPaperSchema,
+  paperIdInPath,
   updatePaper,
   uploadPaper,
 } from "./schema";
@@ -711,7 +712,7 @@ export class PapersController {
   };
 
   public createComment = async (req: Request, res: Response) => {
-    const { paperId } = getPaperCommentsParamsSchema.parse(req.params);
+    const { paperId } = paperIdInPath.parse(req.params);
     const { body, parentCommentId } = createPaperCommentSchema.parse(req.body);
 
     if (!req.user) {
@@ -769,7 +770,10 @@ export class PapersController {
   };
 
   public listComments = async (req: Request, res: Response) => {
-    const { paperId } = getPaperCommentsParamsSchema.parse(req.params);
+    const { paperId } = paperIdInPath.parse(req.params);
+    const { limit, cursor, sortDir } = getPaperCommentsParamsSchema.parse(
+      req.query,
+    );
 
     const paper = await this.papersRepository.findPaperById(paperId);
 
@@ -779,10 +783,21 @@ export class PapersController {
       });
     }
 
-    const comments = await this.papersRepository.listCommentsForPaper(paperId);
+    const { hasMore, comments, nextCursor } =
+      await this.papersRepository.listCommentsForPaper({
+        paperId,
+        limit,
+        cursor,
+        ...(sortDir && { sort: { dir: sortDir } }),
+      });
 
     return res.status(200).json({
       data: comments,
+      meta: {
+        hasMore,
+        nextCursor,
+        limit,
+      },
     });
   };
 }

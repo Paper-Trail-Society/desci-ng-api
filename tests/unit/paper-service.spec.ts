@@ -3,12 +3,13 @@ import { renderCommentBody } from "../../src/modules/papers/service";
 import { MAX_COMMENT_LENGTH } from "../../src/modules/papers/schema";
 
 function generateRandomString(length: number) {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 ';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-        result += characters.charAt(Math.floor(Math.random() * characters.length));
-    }
-    return result;
+  const characters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 ";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
 }
 
 describe("renderCommentBody", () => {
@@ -27,8 +28,6 @@ describe("renderCommentBody", () => {
     expect,
   }) => {
     const heading1 = renderCommentBody("# This is a comment");
-
-    console.log({heading1})
 
     expect(heading1.bodyHtml).toBe("This is a comment\n");
     expect(heading1.bodyMarkdown).toBe("# This is a comment");
@@ -59,7 +58,11 @@ describe("renderCommentBody", () => {
     expect(heading6.bodyMarkdown).toBe("###### This is a comment");
   });
 
-  it("should throw an error if comment body is greater than 2000 chars", async ({ expect}) => {
-    expect(() => renderCommentBody(generateRandomString(MAX_COMMENT_LENGTH + 1))).toThrowError();
-  })
+  it("should throw an error if comment body is greater than 2000 chars", async ({
+    expect,
+  }) => {
+    expect(() =>
+      renderCommentBody(generateRandomString(MAX_COMMENT_LENGTH + 1)),
+    ).toThrowError();
+  });
 });

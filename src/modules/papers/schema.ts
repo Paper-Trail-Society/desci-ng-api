@@ -54,11 +54,23 @@ export const createPaperCommentSchema = z.object({
       message: `Comment body must be at most ${MAX_COMMENT_LENGTH} characters long`,
     }),
   parentCommentId: z
-    .preprocess((v) =>
-      v === undefined || v === null || v === "" ? undefined : Number(v), z.number().int().positive())
+    .preprocess(
+      (v) =>
+        v === undefined || v === null || v === "" ? undefined : Number(v),
+      z.number().int().positive(),
+    )
     .optional(),
 });
 
 export const getPaperCommentsParamsSchema = z.object({
+  cursor: z.preprocess((v) => Number(v), z.number()).optional(),
+  limit: z
+    .preprocess((v) => Number(v), z.number())
+    .optional()
+    .default(10),
+  sortDir: z.enum(["asc", "desc"]).default("desc").optional(),
+});
+
+export const paperIdInPath = z.object({
   paperId: z.preprocess((v) => Number(v), z.number()),
 });

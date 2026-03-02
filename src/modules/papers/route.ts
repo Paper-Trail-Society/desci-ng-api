@@ -8,6 +8,7 @@ import {
   updatePaper,
   getPaperSchema,
   createPaperCommentSchema,
+  getPaperCommentsParamsSchema,
 } from "./schema";
 import z from "zod";
 import { authMiddleware } from "../../middlewares/auth";
@@ -89,5 +90,6 @@ papersRouter.post(
 papersRouter.get(
   "/papers/:paperId/comments",
   validateRequest("params", z.object({ paperId: z.preprocess((v) => Number(v), z.number()) })),
+  validateRequest("query", getPaperCommentsParamsSchema),
   papersController.listComments,
 );

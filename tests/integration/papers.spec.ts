@@ -8,6 +8,7 @@ import { UserFactory } from "../factories/user-factory";
 import { CategoryFactory } from "../factories/field-factory";
 import { ipfsService } from "../../src/utils/ipfs";
 import { PaperCommentFactory } from "../factories/paper-comment-factory";
+import { PapersRepository } from "../../src/modules/papers/repository";
 
 const TEST_CID = "mock-cid";
 const TEST_PDF_BUFFER = Buffer.from("%PDF-1.4 Test PDF content");
@@ -1006,5 +1007,146 @@ describe("POST /papers/{paperId}/comments", () => {
     expect(res.body).toHaveProperty("bodyHtml", `<p>${commentBody}</p>\n`);
     expect(res.body).toHaveProperty("authorId", testUser.id);
     expect(res.body).toHaveProperty("paperId", testPaper.id);
+  });
+});
+
+describe("GET /papers/{paperId}/comments", () => {
+  it("should return 404 when listing comments for a non-existing paper", async () => {
+    const res = await api
+      .get("/papers/23429/comments")
+      .expect("Content-Type", /json/)
+      .expect(404);
+  });
+
+  it("should return paginated comments", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({
+      status: "pending",
+      userId: testUser.id,
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    for (let i = 0; i < 11; i++) {
+      await paperCommentFactory.create({
+        paperId: testPaper.id,
+        authorId: testUser.id,
+        body: `This is comment ${i}`,
+        parentCommentId: null,
+      });
+    }
+
+    const res = await api
+      .get(`/papers/${testPaper.id}/comments`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(res.body).toHaveProperty("data");
+    expect(res.body.data).toHaveLength(10); // default comments limit
+    expect(res.body).toHaveProperty("meta");
+    expect(res.body.meta).toHaveProperty("hasMore");
+    expect(res.body.meta).toHaveProperty("nextCursor");
+    expect(res.body.meta).toHaveProperty("limit");
+
+    const secondRes = await api
+      .get(`/papers/${testPaper.id}/comments?limit=5`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(secondRes.body).toHaveProperty("data");
+    expect(secondRes.body.data).toHaveLength(5);
+    expect(secondRes.body).toHaveProperty("meta");
+    expect(secondRes.body.meta).toHaveProperty("hasMore");
+    expect(secondRes.body.meta.hasMore).toBe(true);
+    expect(secondRes.body.meta).toHaveProperty("nextCursor");
+    expect(secondRes.body.meta).toHaveProperty("limit");
+  });
+
+  it("should paginate comment by cursor", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({
+      status: "pending",
+      userId: testUser.id,
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    for (let i = 0; i < 20; i++) {
+      await paperCommentFactory.create({
+        paperId: testPaper.id,
+        authorId: testUser.id,
+        body: `This is comment ${i}`,
+        parentCommentId: null,
+      });
+    }
+
+    const LIMIT = 10;
+
+    const res = await api
+      .get(`/papers/${testPaper.id}/comments?limit=${LIMIT}`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(res.body).toHaveProperty("data");
+    expect(res.body.data).toHaveLength(10);
+    expect(res.body).toHaveProperty("meta");
+    expect(res.body.meta).toHaveProperty("hasMore");
+    expect(res.body.meta.hasMore).toBe(true);
+    expect(res.body.meta).toHaveProperty("nextCursor");
+    expect(res.body.meta.nextCursor).toBeTypeOf("number");
+    expect(res.body.meta).toHaveProperty("limit");
+
+    const nextPageRes = await api
+      .get(
+        `/papers/${testPaper.id}/comments?limit=${LIMIT}&cursor=${res.body.meta.nextCursor}`,
+      )
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(nextPageRes.body).toHaveProperty("data");
+    expect(nextPageRes.body.data).toHaveLength(10);
+    expect(nextPageRes.body).toHaveProperty("meta");
+    expect(nextPageRes.body.meta).toHaveProperty("hasMore");
+    expect(nextPageRes.body.meta.hasMore).toBe(false);
+    expect(nextPageRes.body.meta).toHaveProperty("nextCursor");
+    expect(nextPageRes.body.meta.nextCursor).toBe(null);
+    expect(nextPageRes.body.meta).toHaveProperty("limit");
+  });
+
+  it("should sort comments by earliest", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({
+      status: "pending",
+      userId: testUser.id,
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    for (let i = 0; i < 11; i++) {
+      await paperCommentFactory.create({
+        paperId: testPaper.id,
+        authorId: testUser.id,
+        body: `This is comment ${i}`,
+        parentCommentId: null,
+      });
+    }
+
+    const sortDirection = "asc";
+
+    const res = await api
+      .get(`/papers/${testPaper.id}/comments?sortDir=${sortDirection}`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    const firstCommentCreatedAt = new Date(res.body.data[0].createdAt);
+    const secondCommentCreatedAt = new Date(res.body.data[1].createdAt);
+
+    expect(res.body).toHaveProperty("data");
+    expect(res.body.data).toHaveLength(10);
+
+    expect(firstCommentCreatedAt < secondCommentCreatedAt).toBe(true);
   });
 });

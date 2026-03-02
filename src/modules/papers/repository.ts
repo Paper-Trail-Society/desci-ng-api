@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, isNull, lt } from "drizzle-orm";
 import { db } from "../../config/db";
 import {
   papersTable,
@@ -65,11 +65,20 @@ export class PapersRepository {
       .returning()
       .execute();
 
-
     return comment;
   };
 
-  public listCommentsForPaper = async (paperId: number) => {
+  public listCommentsForPaper = async ({
+    paperId,
+    cursor,
+    limit,
+    sort,
+  }: {
+    paperId: number;
+    cursor?: number;
+    limit: number;
+    sort?: { dir: "asc" | "desc" };
+  }) => {
     const comments = await db
       .select({
         id: paperCommentsTable.id,
@@ -88,14 +97,36 @@ export class PapersRepository {
       })
       .from(paperCommentsTable)
       .innerJoin(usersTable, eq(usersTable.id, paperCommentsTable.authorId))
-      .where(eq(paperCommentsTable.paperId, paperId))
-      .orderBy(
-        // newest first by default
-        desc(paperCommentsTable.createdAt),
+      .where(
+        and(
+          eq(paperCommentsTable.paperId, paperId),
+          cursor
+            ? sort
+              ? sort.dir == "desc"
+                ? lt(paperCommentsTable.id, cursor)
+                : gt(paperCommentsTable.id, cursor)
+              : lt(paperCommentsTable.id, cursor)
+            : undefined,
+        ),
       )
+      .orderBy(
+        sort
+          ? sort.dir == "desc"
+            ? desc(paperCommentsTable.createdAt)
+            : asc(paperCommentsTable.createdAt)
+          : desc(paperCommentsTable.createdAt),
+      )
+      .limit(limit + 1)
       .execute();
 
-    return comments as PaperComment[];
+    let hasMore = comments.length > limit;
+    if (hasMore) {
+      comments.pop();
+    }
+
+    const nextCursor = hasMore ? comments[comments.length - 1].id : null;
+
+    return { comments: comments as PaperComment[], hasMore, nextCursor };
   };
 
   public doesTopLevelCommentBelongToPaper = async (
@@ -120,4 +151,3 @@ export class PapersRepository {
     return !!comment;
   };
 }
-
