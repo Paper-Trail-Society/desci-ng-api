@@ -1149,4 +1149,80 @@ describe("GET /papers/{paperId}/comments", () => {
 
     expect(firstCommentCreatedAt < secondCommentCreatedAt).toBe(true);
   });
+
+  it("should only return top-level comments by default", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({
+      status: "published",
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    const parentComment = await paperCommentFactory.create({
+      paperId: testPaper.id,
+      authorId: testUser.id,
+      body: `Parent comment`,
+      parentCommentId: null,
+    });
+
+    // Create a reply to the parent comment
+    await paperCommentFactory.create({
+      paperId: testPaper.id,
+      authorId: testUser.id,
+      body: `Reply comment`,
+      parentCommentId: parentComment.id,
+    });
+
+    const res = await api
+      .get(`/papers/${testPaper.id}/comments`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(res.body).toHaveProperty("data");
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].id).toBe(parentComment.id);
+  });
+
+  it("should return replies when parentCommentId is provided", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({
+      status: "published",
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    const parentComment = await paperCommentFactory.create({
+      paperId: testPaper.id,
+      authorId: testUser.id,
+      body: `Parent comment`,
+      parentCommentId: null,
+    });
+
+    const reply1 = await paperCommentFactory.create({
+      paperId: testPaper.id,
+      authorId: testUser.id,
+      body: `Reply comment 1`,
+      parentCommentId: parentComment.id,
+    });
+
+    const reply2 = await paperCommentFactory.create({
+      paperId: testPaper.id,
+      authorId: testUser.id,
+      body: `Reply comment 2`,
+      parentCommentId: parentComment.id,
+    });
+
+    const res = await api
+      .get(`/papers/${testPaper.id}/comments?parentCommentId=${parentComment.id}`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(res.body).toHaveProperty("data");
+    expect(res.body.data).toHaveLength(2);
+    const returnedIds = res.body.data.map((c: any) => c.id);
+    expect(returnedIds).toContain(reply1.id);
+    expect(returnedIds).toContain(reply2.id);
+  });
 });

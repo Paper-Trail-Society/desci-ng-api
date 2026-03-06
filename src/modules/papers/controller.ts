@@ -771,9 +771,8 @@ export class PapersController {
 
   public listComments = async (req: Request, res: Response) => {
     const { paperId } = paperIdInPath.parse(req.params);
-    const { limit, cursor, sortDir } = getPaperCommentsParamsSchema.parse(
-      req.query,
-    );
+    const { limit, cursor, sortDir, parentCommentId } =
+      getPaperCommentsParamsSchema.parse(req.query);
 
     const paper = await this.papersRepository.findPaperById(paperId);
 
@@ -788,6 +787,7 @@ export class PapersController {
         paperId,
         limit,
         cursor,
+        parentCommentId,
         ...(sortDir && { sort: { dir: sortDir } }),
       });
 

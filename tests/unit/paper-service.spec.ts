@@ -19,7 +19,7 @@ describe("renderCommentBody", () => {
     const comment = renderCommentBody("**This is a comment**");
 
     expect(comment.bodyHtml).toBe(
-      "<p><strong>This is a comment</strong></p>\n",
+      '<p><strong>This is a comment</strong></p>\n',
     );
     expect(comment.bodyMarkdown).toBe("**This is a comment**");
   });

@@ -69,6 +69,7 @@ export const getPaperCommentsParamsSchema = z.object({
     .optional()
     .default(10),
   sortDir: z.enum(["asc", "desc"]).default("desc").optional(),
+  parentCommentId: z.preprocess((v) => Number(v), z.number()).optional(),
 });
 
 export const paperIdInPath = z.object({
