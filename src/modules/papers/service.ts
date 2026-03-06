@@ -23,7 +23,8 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
     "br",
   ],
   allowedAttributes: {
-    a: ["href", "title"],
+    a: ["href", "title", "class", "target", "rel"],
+    "*": ["class"],
   },
   allowedSchemes: ["http", "https", "mailto"],
 };

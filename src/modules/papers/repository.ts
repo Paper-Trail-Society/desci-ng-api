@@ -73,11 +73,13 @@ export class PapersRepository {
     cursor,
     limit,
     sort,
+    parentCommentId,
   }: {
     paperId: number;
     cursor?: number;
     limit: number;
     sort?: { dir: "asc" | "desc" };
+    parentCommentId?: number;
   }) => {
     const comments = await db
       .select({
@@ -100,6 +102,9 @@ export class PapersRepository {
       .where(
         and(
           eq(paperCommentsTable.paperId, paperId),
+          parentCommentId
+            ? eq(paperCommentsTable.parentCommentId, parentCommentId)
+            : isNull(paperCommentsTable.parentCommentId),
           cursor
             ? sort
               ? sort.dir == "desc"
