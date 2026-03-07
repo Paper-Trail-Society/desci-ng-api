@@ -85,6 +85,32 @@ describe("GET /papers", () => {
     expect(res.body.data[0]).toHaveProperty("id", paper1.id);
   });
 
+  it("allows searching papers by author name using general search", async ({ expect }) => {
+    const author = await UserFactory.create({ name: "John Doe" });
+    const paper = await PaperFactory.create({
+      title: "Some Paper",
+      userId: author.id,
+      status: "published",
+    });
+
+    // Create another paper by different author
+    const otherAuthor = await UserFactory.create({ name: "Jane Smith" });
+    await PaperFactory.create({
+      title: "Another Paper",
+      userId: otherAuthor.id,
+      status: "published",
+    });
+
+    // Test general search param including author name
+    const res = await api
+      .get("/papers")
+      .query({ search: "Doe" })
+      .expect(200);
+
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].id).toBe(paper.id);
+  });
+
   it("allows authenticated users to see their own pending papers", async ({
     expect,
   }) => {

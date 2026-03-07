@@ -222,10 +222,11 @@ export class PapersController {
 
     if (search) {
       conditions.push(sql`(
-              papers.title ILIKE ${"%" + search.toLowerCase() + "%"} OR
-              papers.abstract ILIKE ${"%" + search.toLowerCase() + "%"} OR
-              fields.name ILIKE ${"%" + search.toLowerCase() + "%"} OR
-              categories.name ILIKE ${"%" + search.toLowerCase() + "%"}
+              LOWER(papers.title) ILIKE ${"%" + search.toLowerCase() + "%"} OR
+              LOWER(papers.abstract) ILIKE ${"%" + search.toLowerCase() + "%"} OR
+              LOWER(fields.name) ILIKE ${"%" + search.toLowerCase() + "%"} OR
+              LOWER(categories.name) ILIKE ${"%" + search.toLowerCase() + "%"} OR
+              LOWER(users.name) ILIKE ${"%" + search.toLowerCase() + "%"}
             )`);
     }
 
@@ -247,7 +248,6 @@ export class PapersController {
             conditions.push(sql`papers.user_id = ${userId}`);
             conditions.push(sql`papers.status = ${status}`);
           } else {
-            req.log.info("User requesting all their papers");
             conditions.push(sql`papers.user_id = ${userId}`);
           }
         }
@@ -273,7 +273,7 @@ export class PapersController {
 
     finalQuery = sql`
             ${finalQuery}
-            GROUP BY papers.id, users.id, categories.id
+            GROUP BY papers.id, users.id, categories.id, users.name
             ORDER BY papers.created_at DESC
             LIMIT ${limit}
             OFFSET ${offset}
@@ -285,6 +285,7 @@ export class PapersController {
             FROM desci.papers as papers
             INNER JOIN desci.categories ON papers.category_id = desci.categories.id
             INNER JOIN desci.fields ON desci.categories.field_id = desci.fields.id
+            INNER JOIN desci.users ON users.id = papers.user_id
           `;
 
     if (conditions.length) {
