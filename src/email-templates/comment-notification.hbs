@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="und" dir="auto" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Comment on {{paperTitle}} - Nubian</title>
+  <style>
+    /* Reset & base styles */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #F4F6F9;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    .email-wrapper {
+      background-color: #F4F6F9;
+      padding: 32px 16px;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #FFFFFF;
+      border-radius: 24px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+      border: 1px solid #EFF3F8;
+      overflow: hidden;
+    }
+    .content-cell {
+      padding: 0 28px;
+    }
+    @media only screen and (max-width: 600px) {
+      .content-cell {
+        padding: 0 20px;
+      }
+      .button-group td {
+        display: block;
+        width: 100% !important;
+        text-align: center;
+        margin-bottom: 12px;
+      }
+      .button-group a {
+        width: 100%;
+        box-sizing: border-box;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <table class="email-container" role="presentation" cellpadding="0" cellspacing="0">
+      <!-- Logo -->
+       <tr>
+        <td align="center" style="padding: 32px 28px 16px 28px;">
+          <img src="https://nubianresearch.com/assets/nubian-logo.png" width="140" alt="Nubian" style="display: block; max-width: 100%; height: auto;">
+        </td>
+      </tr>
+
+      <!-- Main title -->
+      <tr>
+        <td align="center" style="padding: 0 28px 12px 28px;">
+          <h1 style="margin: 0; font-size: 26px; font-weight: 600; color: #1A2C3E; letter-spacing: -0.3px; line-height: 1.3;">{{notificationTitle}}</h1>
+        </td>
+      </tr>
+
+      <!-- Greeting & message -->
+      <tr>
+        <td class="content-cell" style="padding-top: 24px;">
+          <p style="margin: 0 0 8px 0; font-size: 16px; line-height: 1.5; color: #2C3E4F;">Hi {{paperAuthorName}},</p>
+          <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5; color: #2C3E4F;">
+            <strong style="color: #B52221;">{{commenterName}}</strong> left a comment on your {{entity}}:
+          </p>
+        </td>
+      </tr>
+
+      <!-- Optional "In reply to" context (if available) -->
+      {{#if inReplyToText}}
+      <tr>
+        <td class="content-cell" style="padding-bottom: 8px;">
+          <div style="background: #FEF9E7; border-left: 3px solid #F5B042; padding: 12px 16px; border-radius: 8px; font-size: 14px; color: #7B5E2C;">
+            <span style="font-weight: 600;">In reply to:</span> “{{inReplyToText}}”
+          </div>
+        </td>
+      </tr>
+      {{/if}}
+
+      <!-- Comment box (with optional truncated view and 'read more' link) -->
+      <tr>
+        <td class="content-cell">
+          <table width="100%" style="background: #F8FAFE; border-radius: 16px; border: 1px solid #E9EDF2;">
+            <tr>
+              <td style="padding: 20px 24px; font-size: 15px; line-height: 1.6; color: #1F2A3A;">
+                {{{commentText}}}
+                {{#if commentTruncated}}
+                  <div style="margin-top: 12px;">
+                    <a href="{{fullCommentUrl}}" style="color: #B52221; text-decoration: none; font-weight: 500;">Read full comment →</a>
+                  </div>
+                {{/if}}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Enhanced metadata: paper info with authors/journal and linked title -->
+      <tr>
+        <td class="content-cell" style="padding-top: 24px;">
+          <table width="100%" style="border-collapse: collapse;">
+            <tr>
+              <td style="padding-bottom: 8px;">
+                <div style="font-size: 14px; color: #5A6E7F;">
+                  <span style="font-weight: 600; color: #2C3E4F;">Paper:</span>
+                  <strong><a href="{{paperUrl}}" style="color: #1F2A3A; text-decoration: none; border-bottom: 1px solid #DCE3EC;">{{paperTitle}}</a></strong>
+                </div>
+                  <div style="font-size: 13px; color: #6B7F90; margin-top: 4px;">
+                    {{paperAuthorName}}
+                  </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding-top: 8px;">
+                <div style="font-size: 13px; color: #6B7F90;">
+                  <span style="font-weight: 600; color: #2C3E4F;">Posted:</span> {{commentTimestamp}}
+                </div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Two action buttons (View Comment & Reply) -->
+      <tr>
+        <td align="center" style="padding: 28px 28px 16px 28px;">
+          <table class="button-group" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+            <tr>
+              <td align="center" style="padding: 0 6px 0 0;">
+                <a href="{{commentUrl}}" style="display: inline-block; background: #B52221; color: #FFFFFF; padding: 12px 28px; border-radius: 40px; text-decoration: none; font-size: 15px; font-weight: 500; text-align: center; min-width: 140px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">View Comment</a>
+              </td>
+              <td align="center" style="padding: 0 0 0 6px;">
+                <a href="{{replyUrl}}" style="display: inline-block; background: #FFFFFF; color: #B52221; padding: 12px 28px; border-radius: 40px; text-decoration: none; font-size: 15px; font-weight: 500; text-align: center; border: 1px solid #B52221; min-width: 140px;">Reply</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      <!-- Additional link: view all comments on this paper -->
+      <tr>
+        <td align="center" style="padding: 0 28px 16px 28px;">
+          <a href="{{allCommentsUrl}}" style="color: #4F6F8F; text-decoration: none; font-size: 14px; border-bottom: 1px dashed #CDD9ED;">View all comments on this paper →</a>
+        </td>
+      </tr>
+
+      <!-- Divider -->
+      <tr>
+        <td style="padding: 16px 28px 0 28px;">
+          <div style="border-top: 1px solid #E6EDF4;"></div>
+        </td>
+      </tr>
+
+      <!-- Fallback link -->
+      <tr>
+        <td class="content-cell" style="padding-top: 20px; padding-bottom: 8px;">
+          <p style="margin: 0 0 6px 0; font-size: 13px; color: #6B7F90; text-align: center;">
+            If the button doesn't work, copy and paste this link:
+          </p>
+          <p style="margin: 0; font-size: 12px; word-break: break-all; text-align: center;">
+            <a href="{{commentUrl}}" style="color: #4F6F8F; text-decoration: underline;">{{commentUrl}}</a>
+          </p>
+        </td>
+      </tr>
+
+      <!-- Footer -->
+      <tr>
+        <td align="center" style="padding: 24px 28px 32px 28px; border-top: 1px solid #E6EDF4;">
+          <div style="font-size: 12px; color: #8A9AAC; line-height: 1.5;">
+            This is an automated message from Nubian.<br>
+            Please do not reply to this email.
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

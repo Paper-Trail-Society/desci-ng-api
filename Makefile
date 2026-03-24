@@ -30,7 +30,7 @@ ps:
 	docker compose ps
 
 test: setup
-	docker compose exec api /bin/sh -c "npm run test"
+	docker compose exec api /bin/sh -c "ENABLE_COMMENT_NOTIFICATIONS=false npm run test"
 
 help:
 	@echo "Makefile targets:"

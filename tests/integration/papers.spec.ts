@@ -8,7 +8,6 @@ import { UserFactory } from "../factories/user-factory";
 import { CategoryFactory } from "../factories/field-factory";
 import { ipfsService } from "../../src/utils/ipfs";
 import { PaperCommentFactory } from "../factories/paper-comment-factory";
-import { PapersRepository } from "../../src/modules/papers/repository";
 
 const TEST_CID = "mock-cid";
 const TEST_PDF_BUFFER = Buffer.from("%PDF-1.4 Test PDF content");
@@ -19,6 +18,12 @@ vi.mock("../../src/utils/ipfs", () => ({
     deleteFilesByCid: vi.fn().mockResolvedValue({}),
     getFileByCid: vi.fn().mockResolvedValue({ id: "mock-ipfs-id" }),
   },
+}));
+
+vi.mock('../../src/utils/mail-service', () => ({
+  MailService: vi.fn().mockImplementation(() => ({
+    send: vi.fn(),
+  })),
 }));
 
 const api = request(app);
@@ -980,7 +985,8 @@ describe("POST /papers/{paperId}/comments", () => {
       .expect("Content-Type", /json/)
       .expect(201);
 
-    expect(res.body).toHaveProperty("bodyMarkdown", commentBody);
+    // Never return the markdown content to the client, the client doesn't use it.
+    expect("bodyMarkdown" in res.body).toBe(false);
     expect(res.body).toHaveProperty("bodyHtml", `<p>${commentBody}</p>\n`);
     expect(res.body).toHaveProperty("authorId", testUser.id);
     expect(res.body).toHaveProperty("paperId", testPaper.id);
@@ -1029,7 +1035,9 @@ describe("POST /papers/{paperId}/comments", () => {
       .expect(201);
 
     expect(res.body).toHaveProperty("parentCommentId", testComment.id);
-    expect(res.body).toHaveProperty("bodyMarkdown", commentBody);
+
+    // Never return the markdown content to the client, the client doesn't use it.
+    expect("bodyMarkdown" in res.body).toBe(false);
     expect(res.body).toHaveProperty("bodyHtml", `<p>${commentBody}</p>\n`);
     expect(res.body).toHaveProperty("authorId", testUser.id);
     expect(res.body).toHaveProperty("paperId", testPaper.id);

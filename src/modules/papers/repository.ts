@@ -8,20 +8,32 @@ import {
 } from "../../db/schema";
 import { PaperComment } from "./types";
 
-export class PapersRepository {
+export class PaperRepository {
   public findPaperById = async (paperId: number) => {
     const [paper] = await db
-      .select()
+      .select({
+        id: papersTable.id,
+        title: papersTable.title,
+        slug: papersTable.slug,
+        status: papersTable.status,
+        userId: papersTable.userId,
+        author: {
+          id: usersTable.id,
+          email: usersTable.email,
+          name: usersTable.name,
+        },
+      })
       .from(papersTable)
       .where(eq(papersTable.id, paperId))
+      .innerJoin(usersTable, eq(papersTable.userId, usersTable.id))
       .limit(1)
       .execute();
 
-    return paper as SelectPaper | undefined;
+    return paper;
   };
 
   public findCommentById = async (commentId: number) => {
-    const [comment] = await db
+    const result = await db
       .select({
         id: paperCommentsTable.id,
         paperId: paperCommentsTable.paperId,
@@ -43,7 +55,7 @@ export class PapersRepository {
       .limit(1)
       .execute();
 
-    return (comment as PaperComment | undefined) ?? null;
+    return result.length === 0 ? null : result[0] as PaperComment;
   };
 
   public createComment = async (params: {
@@ -62,7 +74,15 @@ export class PapersRepository {
         bodyMarkdown: params.bodyMarkdown,
         bodyHtml: params.bodyHtml,
       })
-      .returning()
+      .returning({
+        id: paperCommentsTable.id,
+        parentCommentId: paperCommentsTable.parentCommentId,
+        paperId: paperCommentsTable.paperId,
+        authorId: paperCommentsTable.authorId,
+        bodyHtml: paperCommentsTable.bodyHtml,
+        createdAt: paperCommentsTable.createdAt,
+        updatedAt: paperCommentsTable.updatedAt
+      })
       .execute();
 
     return comment;
@@ -87,7 +107,6 @@ export class PapersRepository {
         paperId: paperCommentsTable.paperId,
         authorId: paperCommentsTable.authorId,
         parentCommentId: paperCommentsTable.parentCommentId,
-        bodyMarkdown: paperCommentsTable.bodyMarkdown,
         bodyHtml: paperCommentsTable.bodyHtml,
         createdAt: paperCommentsTable.createdAt,
         updatedAt: paperCommentsTable.updatedAt,
@@ -132,6 +151,35 @@ export class PapersRepository {
     const nextCursor = hasMore ? comments[comments.length - 1].id : null;
 
     return { comments: comments as PaperComment[], hasMore, nextCursor };
+  };
+
+  public getPaperCommentById = async (paperId: number, commentId: number) => {
+    const result = await db
+      .select({
+        id: paperCommentsTable.id,
+        paperId: paperCommentsTable.paperId,
+        parentCommentId: paperCommentsTable.parentCommentId,
+        authorId: paperCommentsTable.authorId,
+        author: {
+          id: usersTable.id,
+          name: usersTable.name,
+          email: usersTable.email
+        },
+        createdAt: paperCommentsTable.createdAt,
+        updatedAt: paperCommentsTable.updatedAt
+      })
+      .from(paperCommentsTable)
+      .innerJoin(usersTable, eq(usersTable.id, paperCommentsTable.authorId))
+      .where(
+        and(
+          eq(paperCommentsTable.id, commentId),
+          eq(paperCommentsTable.paperId, paperId),
+        ),
+      )
+      .limit(1)
+      .execute();
+
+    return result.length === 0 ? null : result[0];
   };
 
   public doesTopLevelCommentBelongToPaper = async (

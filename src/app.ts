@@ -19,15 +19,17 @@ const app = express();
 
 app.use(requestContext);
 app.use(httpLogger);
+const CORS_ORIGINS = (
+  process.env.FRONTEND_URLS || "http://localhost:3000,http://localhost:3001"
+)
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
+console.log({CORS_ORIGINS})
 app.use(
   cors({
-    origin: (
-      process.env.FRONTEND_URLS || "http://localhost:3000,http://localhost:3001"
-    )
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean),
+    origin: CORS_ORIGINS,
     credentials: true,
     allowedHeaders: [
       "Origin",
@@ -178,4 +180,3 @@ app.use((req: Request, res: Response) => {
 app.use(errorHandler);
 
 export default app;
-

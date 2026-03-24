@@ -24,19 +24,28 @@ import slug from "slug";
 import { createKeyword } from "../../modules/keywords/service";
 import { ipfsService } from "../../utils/ipfs";
 import { buildOffsetPaginationLinks } from "../../utils/paginator";
-import { PaginatedPapersResponse, Paper } from "./types";
+import {
+  CommentNotificationRecipient,
+  PaginatedPapersResponse,
+  Paper,
+} from "./types";
 import {
   createPaperCommentSchema,
   getPaperCommentsParamsSchema,
 } from "./schema";
-import { PapersRepository } from "./repository";
-import { renderCommentBody } from "./service";
+import { PaperRepository } from "./repository";
+import { PaperService } from "./service";
 
 export class PapersController {
-  private readonly papersRepository: PapersRepository;
+  private readonly papersRepository: PaperRepository;
+  private readonly paperService: PaperService;
 
-  public constructor(papersRepository: PapersRepository) {
+  public constructor(
+    papersRepository: PaperRepository,
+    paperService: PaperService,
+  ) {
     this.papersRepository = papersRepository;
+    this.paperService = paperService;
   }
 
   public create = async (req: MulterRequest, res: Response) => {
@@ -742,22 +751,38 @@ export class PapersController {
       });
     }
 
-    if (parentCommentId !== undefined) {
-      const isTopLevelCommentOnPaper =
-        await this.papersRepository.doesTopLevelCommentBelongToPaper(
-          parentCommentId,
-          paperId,
-        );
+    let notificationRecipient: CommentNotificationRecipient = {
+      name: paper.author.name,
+      email: paper.author.email,
+    };
 
-      if (!isTopLevelCommentOnPaper) {
+    if (parentCommentId) {
+      const parentComment = await this.papersRepository.getPaperCommentById(
+        paperId,
+        parentCommentId,
+      );
+
+      if (!parentComment) {
+        return res.status(400).json({
+          error: "Parent comment doesn't exist for this paper",
+        });
+      }
+
+      const isNotParentComment = parentComment.parentCommentId !== null;
+      if (isNotParentComment) {
         return res.status(400).json({
           error:
             "Invalid parent comment. Replies are only allowed on top-level comments for this paper.",
         });
       }
+      notificationRecipient = {
+        name: parentComment.author.name,
+        email: parentComment.author.email,
+      };
     }
 
-    const { bodyMarkdown, bodyHtml } = renderCommentBody(body);
+    const { bodyMarkdown, bodyHtml } =
+      this.paperService.renderCommentBody(body);
 
     const comment = await this.papersRepository.createComment({
       paperId,
@@ -766,6 +791,29 @@ export class PapersController {
       bodyMarkdown,
       bodyHtml,
     });
+
+    const notificationTitle = parentCommentId
+      ? `${req.user.name} replied to your comment`
+      : `New comment on your post`;
+
+    // fire async operation without wait: send notification to the comment
+    // TODO: move this to bg (implement transactional outbox messaging for comment notification)
+    if (process.env.ENABLE_COMMENT_NOTIFICATIONS == "true") {
+      this.paperService.sendCommentNotification({
+        subject: notificationTitle,
+        recipient: notificationRecipient,
+        parameters: {
+          paperTitle: paper.title,
+          paperAuthorName: paper.author.name,
+          entity: parentCommentId ? "comment" : "post",
+          notificationTitle,
+          commenterName: req.user.name,
+          commentText: comment.bodyHtml,
+          commentTimestamp: comment.createdAt.toISOString(),
+          commentUrl: this.paperService.buildCommentUrl(paper.slug, comment.id),
+        },
+      });
+    }
 
     return res.status(201).json(comment);
   };

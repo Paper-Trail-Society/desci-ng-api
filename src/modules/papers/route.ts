@@ -14,10 +14,15 @@ import z from "zod";
 import { authMiddleware } from "../../middlewares/auth";
 import { adminAuthMiddleware } from "../../middlewares/auth/admin-auth";
 import ApiError from "../../utils/api-error";
-import { PapersRepository } from "./repository";
+import { PaperRepository } from "./repository";
+import { PaperService } from "./service";
+import MailService from "../../utils/email/mail-service";
 
 export const papersRouter = Router();
-const papersController = new PapersController(new PapersRepository());
+const mailService = new MailService();
+const paperService = new PaperService(mailService);
+const paperRepository = new PaperRepository();
+const papersController = new PapersController(paperRepository, paperService);
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
