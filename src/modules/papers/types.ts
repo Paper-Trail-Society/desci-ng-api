@@ -111,6 +111,11 @@ export type CommentNotificationEmailTemplateParameters = {
    * The link to the comment on Nubian
    */
   commentUrl: string
+
+  /**
+   * If comment is a reply, set inReplyToText to the parent comment. Truncated at 200 chars.
+   */
+  inReplyToText?: string
 }
 
 export type CommentNotificationRecipient = {

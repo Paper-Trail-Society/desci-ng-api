@@ -20,7 +20,7 @@ vi.mock("../../src/utils/ipfs", () => ({
   },
 }));
 
-vi.mock('../../src/utils/mail-service', () => ({
+vi.mock("../../src/utils/mail-service", () => ({
   MailService: vi.fn().mockImplementation(() => ({
     send: vi.fn(),
   })),
@@ -90,7 +90,9 @@ describe("GET /papers", () => {
     expect(res.body.data[0]).toHaveProperty("id", paper1.id);
   });
 
-  it("allows searching papers by author name using general search", async ({ expect }) => {
+  it("allows searching papers by author name using general search", async ({
+    expect,
+  }) => {
     const author = await UserFactory.create({ name: "John Doe" });
     const paper = await PaperFactory.create({
       title: "Some Paper",
@@ -107,10 +109,7 @@ describe("GET /papers", () => {
     });
 
     // Test general search param including author name
-    const res = await api
-      .get("/papers")
-      .query({ search: "Doe" })
-      .expect(200);
+    const res = await api.get("/papers").query({ search: "Doe" }).expect(200);
 
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].id).toBe(paper.id);
@@ -976,7 +975,8 @@ describe("POST /papers/{paperId}/comments", () => {
     });
     const testPaper = await PaperFactory.create({ status: "published" });
 
-    const commentBody = "This is a comment";
+    const commentBody =
+      "One of the best works I have read on multiplanetary and space research is this one. I appreciate it especially because it emphasizes the humanitarian dimension of space exploration. As you explained, who governs is not necessarily the most important factor; rather, what truly matters is the system and the laws that are established. Governance becomes meaningful only when it creates structures that promote fairness, cooperation, and long-term progress. We must also recognize that we now live in a world increasingly characterized by abundance (even in space; because of knowledge created). Unlike the past, when knowledge and resources were scarce and competition often resembled a zero-sum game, modern technological and scientific development suggests that collaboration can create expanding opportunities for everyone. For this reason, the real competition today should not merely be about dominance, but about creating knowledge and developing technologies that address seemingly inevitable challenges. In the context of space exploration, such challenges include radiation exposure, adaptation to different gravitational environments, and the biological limits of human life beyond Earth. Ultimately, what can be said is that humans are remarkable in their ability to continuously invent ways to make life easier, safer, and better. Our drive to solve problems and expand the frontiers of knowledge is what makes our species unique.";
 
     const res = await api
       .post(`/papers/${testPaper.id}/comments`)
@@ -1018,8 +1018,11 @@ describe("POST /papers/{paperId}/comments", () => {
     });
     const testPaper = await PaperFactory.create({ status: "published" });
     const paperCommentFactory = new PaperCommentFactory();
+    const parentCommentBody =
+      "One of the best works I have read on multiplanetary and space research is this one. I appreciate it especially because it emphasizes the humanitarian dimension of space exploration. As you explained, who governs is not necessarily the most important factor; rather, what truly matters is the system and the laws that are established. Governance becomes meaningful only when it creates structures that promote fairness, cooperation, and long-term progress. We must also recognize that we now live in a world increasingly characterized by abundance (even in space; because of knowledge created). Unlike the past, when knowledge and resources were scarce and competition often resembled a zero-sum game, modern technological and scientific development suggests that collaboration can create expanding opportunities for everyone. For this reason, the real competition today should not merely be about dominance, but about creating knowledge and developing technologies that address seemingly inevitable challenges. In the context of space exploration, such challenges include radiation exposure, adaptation to different gravitational environments, and the biological limits of human life beyond Earth. Ultimately, what can be said is that humans are remarkable in their ability to continuously invent ways to make life easier, safer, and better. Our drive to solve problems and expand the frontiers of knowledge is what makes our species unique.";
+
     const testComment = await paperCommentFactory.create({
-      body: "This is a test comment",
+      body: parentCommentBody,
       paperId: testPaper.id,
       authorId: testUser.id,
       parentCommentId: null,
@@ -1218,7 +1221,9 @@ describe("GET /papers/{paperId}/comments", () => {
     expect(res.body.data[0].id).toBe(parentComment.id);
   });
 
-  it("should return replies when parentCommentId is provided", async ({ expect }) => {
+  it("should return replies when parentCommentId is provided", async ({
+    expect,
+  }) => {
     const testUser = await UserFactory.create({
       email: "test@example.com",
     });
@@ -1249,7 +1254,9 @@ describe("GET /papers/{paperId}/comments", () => {
     });
 
     const res = await api
-      .get(`/papers/${testPaper.id}/comments?parentCommentId=${parentComment.id}`)
+      .get(
+        `/papers/${testPaper.id}/comments?parentCommentId=${parentComment.id}`,
+      )
       .expect("Content-Type", /json/)
       .expect(200);
 

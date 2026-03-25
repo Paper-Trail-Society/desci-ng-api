@@ -756,6 +756,7 @@ export class PapersController {
       email: paper.author.email,
     };
 
+    let inReplyToText: string | null = null;
     if (parentCommentId) {
       const parentComment = await this.papersRepository.getPaperCommentById(
         paperId,
@@ -779,6 +780,12 @@ export class PapersController {
         name: parentComment.author.name,
         email: parentComment.author.email,
       };
+
+      const inReplyToTextPreviewLength = 200;
+      inReplyToText =
+        parentComment.bodyHtml.length > inReplyToTextPreviewLength
+          ? `${parentComment.bodyHtml.slice(0, inReplyToTextPreviewLength)}...`
+          : parentComment.bodyHtml;
     }
 
     const { bodyMarkdown, bodyHtml } =
@@ -811,6 +818,7 @@ export class PapersController {
           commentText: comment.bodyHtml,
           commentTimestamp: comment.createdAt.toISOString(),
           commentUrl: this.paperService.buildCommentUrl(paper.slug, comment.id),
+          inReplyToText: inReplyToText ?? undefined,
         },
       });
     }
