@@ -5,7 +5,10 @@ import sanitizeHtml from "sanitize-html";
 import Handlebars from "handlebars";
 import { MAX_COMMENT_LENGTH } from "./schema";
 import MailService from "../../utils/email/mail-service";
-import { CommentNotificationEmailTemplateParameters, CommentNotificationRecipient } from "./types";
+import {
+  CommentNotificationEmailTemplateParameters,
+  CommentNotificationRecipient,
+} from "./types";
 
 const markdown = new MarkdownIt({
   html: false,
@@ -41,7 +44,7 @@ export class PaperService {
     this.mailService = mailService;
   }
 
-  private commentNotificationTemplateName = 'comment-notification.hbs'
+  private commentNotificationTemplateName = "comment-notification.hbs";
 
   public renderCommentBody = (rawBody: string) => {
     const body = rawBody.trim();
@@ -70,11 +73,14 @@ export class PaperService {
     recipient: CommentNotificationRecipient;
     parameters: CommentNotificationEmailTemplateParameters;
   }) => {
-    const templatePath =  path.resolve(__dirname, `../../email-templates/${this.commentNotificationTemplateName}`);
+    const templatePath = path.resolve(
+      __dirname,
+      `../../email-templates/${this.commentNotificationTemplateName}`,
+    );
     const templateSource = fs.readFileSync(templatePath, "utf8");
     const template = Handlebars.compile(templateSource);
-  
-    const emailHtml = template({...parameters});
+
+    const emailHtml = template({ ...parameters });
 
     return await this.mailService.send({
       to: [{ name: recipient.name, address: recipient.email }],
@@ -87,7 +93,10 @@ export class PaperService {
     });
   };
 
-    public buildCommentUrl = (paperSlug: string, commentId: number) => {
-    return `https://nubianresearch.com/paper/${paperSlug}#${commentId}`;
-  }
+  public buildCommentUrl = (paperSlug: string, commentId: number) => {
+    return `${this.buildPaperUrl(paperSlug)}#${commentId}`;
+  };
+  public buildPaperUrl = (paperSlug: string) => {
+    return `https://nubianresearch.com/paper/${paperSlug}`;
+  };
 }

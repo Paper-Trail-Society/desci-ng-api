@@ -757,6 +757,9 @@ export class PapersController {
     };
 
     let inReplyToText: string | null = null;
+
+    const commentPreviewLengthInNotification = 200;
+
     if (parentCommentId) {
       const parentComment = await this.papersRepository.getPaperCommentById(
         paperId,
@@ -781,10 +784,9 @@ export class PapersController {
         email: parentComment.author.email,
       };
 
-      const inReplyToTextPreviewLength = 200;
       inReplyToText =
-        parentComment.bodyHtml.length > inReplyToTextPreviewLength
-          ? `${parentComment.bodyHtml.slice(0, inReplyToTextPreviewLength)}...`
+        parentComment.bodyHtml.length > commentPreviewLengthInNotification
+          ? `${parentComment.bodyHtml.slice(0, commentPreviewLengthInNotification)}...`
           : parentComment.bodyHtml;
     }
 
@@ -806,6 +808,11 @@ export class PapersController {
     // fire async operation without wait: send notification to the comment
     // TODO: move this to bg (implement transactional outbox messaging for comment notification)
     if (process.env.ENABLE_COMMENT_NOTIFICATIONS == "true") {
+      const commentText =
+        comment.bodyHtml.length > commentPreviewLengthInNotification
+          ? `${comment.bodyHtml.slice(0, commentPreviewLengthInNotification)}...`
+          : comment.bodyHtml;
+
       this.paperService.sendCommentNotification({
         subject: notificationTitle,
         recipient: notificationRecipient,
@@ -815,10 +822,13 @@ export class PapersController {
           entity: parentCommentId ? "comment" : "post",
           notificationTitle,
           commenterName: req.user.name,
-          commentText: comment.bodyHtml,
+          commentText,
           commentTimestamp: comment.createdAt.toISOString(),
           commentUrl: this.paperService.buildCommentUrl(paper.slug, comment.id),
+          replyUrl: this.paperService.buildCommentUrl(paper.slug, comment.id),
           inReplyToText: inReplyToText ?? undefined,
+          allCommentsUrl: this.paperService.buildPaperUrl(paper.slug),
+          paperUrl: this.paperService.buildPaperUrl(paper.slug),
         },
       });
     }
