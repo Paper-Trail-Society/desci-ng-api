@@ -128,7 +128,8 @@ export type CommentNotificationEmailTemplateParameters = {
   replyUrl: string
 
   /**
-   * If comment is a reply, set inReplyToText to the parent comment. Truncated at 200 chars.
+   * If comment is a reply, set inReplyToText to a plain-text preview of the
+   * parent comment. Truncated at 200 chars.
    */
   inReplyToText?: string
 }

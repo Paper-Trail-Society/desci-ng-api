@@ -160,6 +160,7 @@ export class PaperRepository {
         paperId: paperCommentsTable.paperId,
         parentCommentId: paperCommentsTable.parentCommentId,
         bodyHtml: paperCommentsTable.bodyHtml,
+        bodyMarkdown: paperCommentsTable.bodyMarkdown,
         authorId: paperCommentsTable.authorId,
         author: {
           id: usersTable.id,

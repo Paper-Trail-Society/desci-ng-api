@@ -793,9 +793,9 @@ export class PapersController {
       };
 
       inReplyToText =
-        parentComment.bodyHtml.length > commentPreviewLengthInNotification
-          ? `${parentComment.bodyHtml.slice(0, commentPreviewLengthInNotification)}...`
-          : parentComment.bodyHtml;
+        parentComment.bodyMarkdown.length > commentPreviewLengthInNotification
+          ? `${parentComment.bodyMarkdown.slice(0, commentPreviewLengthInNotification)}...`
+          : parentComment.bodyMarkdown;
     }
 
     const { bodyMarkdown, bodyHtml } =
