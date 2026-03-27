@@ -71,7 +71,11 @@
         <td class="content-cell" style="padding-top: 24px;">
           <p style="margin: 0 0 8px 0; font-size: 16px; line-height: 1.5; color: #2C3E4F;">Hi {{paperAuthorName}},</p>
           <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5; color: #2C3E4F;">
+            {{#if inReplyToText}}
+            <strong style="color: #B52221;">{{commenterName}}</strong> replied to your comment:
+            {{else}}
             <strong style="color: #B52221;">{{commenterName}}</strong> left a comment on your {{entity}}:
+            {{/if}}
           </p>
         </td>
       </tr>

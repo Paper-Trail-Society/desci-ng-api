@@ -1,14 +1,7 @@
 import { describe, it, vi } from "vitest";
 import { PaperService } from "../../src/modules/papers/service";
 import { MAX_COMMENT_LENGTH } from "../../src/modules/papers/schema";
-import MailService from "../../src/utils/email/mail-service";
-import { AbstractMailClient } from "../../src/utils/email/abstract-email-client";
-
-vi.mock('../../src/utils/mail-service', () => ({
-  MailService: vi.fn().mockImplementation(() => ({
-    send: vi.fn(),
-  })),
-}));
+import type MailService from "../../src/utils/email/mail-service";
 
 function generateRandomString(length: number) {
   const characters =
@@ -20,11 +13,17 @@ function generateRandomString(length: number) {
   return result;
 }
 
+const createMailServiceMock = () => {
+  return {
+    send: vi.fn().mockResolvedValue(undefined),
+  } as unknown as MailService;
+};
+
 describe("PaperService.renderCommentBody", () => {
   it("should return HTML and markdown equivalent of a markdown comment", async ({
     expect,
   }) => {
-    const paperService = new PaperService(new MailService());
+    const paperService = new PaperService(createMailServiceMock());
     const comment = paperService.renderCommentBody(
       "**This is a comment**",
     );
@@ -36,7 +35,7 @@ describe("PaperService.renderCommentBody", () => {
   });
 
   it("converts h1 markdown heading to h4 HTML heading", async ({ expect }) => {
-    const paperService = new PaperService(new MailService());
+    const paperService = new PaperService(createMailServiceMock());
 
     const heading1 = paperService.renderCommentBody("# This is a comment");
 
@@ -45,7 +44,7 @@ describe("PaperService.renderCommentBody", () => {
   });
 
   it("converts h2 markdown heading to h4 HTML heading", async ({ expect }) => {
-    const paperService = new PaperService(new MailService());
+    const paperService = new PaperService(createMailServiceMock());
 
     const heading2 = paperService.renderCommentBody("## This is a comment");
 
@@ -54,7 +53,7 @@ describe("PaperService.renderCommentBody", () => {
   });
 
   it("converts h3 markdown heading to h4 HTML heading", async ({ expect }) => {
-    const paperService = new PaperService(new MailService());
+    const paperService = new PaperService(createMailServiceMock());
 
     const heading3 = paperService.renderCommentBody("### This is a comment");
 
@@ -63,7 +62,7 @@ describe("PaperService.renderCommentBody", () => {
   });
 
   it("preserves h4 markdown heading as h4 HTML heading", async ({ expect }) => {
-    const paperService = new PaperService(new MailService());
+    const paperService = new PaperService(createMailServiceMock());
 
     const heading4 = paperService.renderCommentBody("#### This is a comment");
 
@@ -72,7 +71,7 @@ describe("PaperService.renderCommentBody", () => {
   });
 
   it("preserves h5 markdown heading as h5 HTML heading", async ({ expect }) => {
-    const paperService = new PaperService(new MailService());
+    const paperService = new PaperService(createMailServiceMock());
 
     const heading5 = paperService.renderCommentBody("##### This is a comment");
 
@@ -81,7 +80,7 @@ describe("PaperService.renderCommentBody", () => {
   });
 
   it("preserves h6 markdown heading as h6 HTML heading", async ({ expect }) => {
-    const paperService = new PaperService(new MailService());
+    const paperService = new PaperService(createMailServiceMock());
 
     const heading6 = paperService.renderCommentBody("###### This is a comment");
 
@@ -92,12 +91,86 @@ describe("PaperService.renderCommentBody", () => {
   it("should throw an error if comment body is greater than 2000 chars", async ({
     expect,
   }) => {
-    const paperService = new PaperService(new MailService());
+    const paperService = new PaperService(createMailServiceMock());
 
     expect(() => 
       paperService.renderCommentBody(
         generateRandomString(MAX_COMMENT_LENGTH + 1),
       ),
     ).toThrowError();
+  });
+});
+
+describe("PaperService.sendCommentNotification", () => {
+  it("uses reply-specific copy when notifying about a reply", async ({
+    expect,
+  }) => {
+    const mailService = createMailServiceMock();
+    const paperService = new PaperService(mailService);
+
+    await paperService.sendCommentNotification({
+      subject: "Reply notification",
+      recipient: {
+        name: "Paper Owner",
+        email: "owner@example.com",
+      },
+      parameters: {
+        notificationTitle: "Reply notification",
+        entity: "comment",
+        paperTitle: "Test Paper",
+        paperAuthorName: "Paper Owner",
+        commenterName: "Reply Author",
+        commentText: "<p>Reply body</p>",
+        commentTimestamp: "2026-03-27T10:05:00.000Z",
+        commentUrl: "https://nubianresearch.com/paper/test-paper#23",
+        allCommentsUrl: "https://nubianresearch.com/paper/test-paper",
+        paperUrl: "https://nubianresearch.com/paper/test-paper",
+        replyUrl: "https://nubianresearch.com/paper/test-paper#23",
+        inReplyToText: "Original comment body",
+      },
+    });
+
+    expect(mailService.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        html: expect.stringContaining("replied to your comment"),
+      }),
+    );
+    expect(mailService.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        html: expect.not.stringContaining("left a comment on your comment"),
+      }),
+    );
+  });
+
+  it("keeps the original copy for new comments on posts", async ({ expect }) => {
+    const mailService = createMailServiceMock();
+    const paperService = new PaperService(mailService);
+
+    await paperService.sendCommentNotification({
+      subject: "Comment notification",
+      recipient: {
+        name: "Paper Owner",
+        email: "owner@example.com",
+      },
+      parameters: {
+        notificationTitle: "Comment notification",
+        entity: "post",
+        paperTitle: "Test Paper",
+        paperAuthorName: "Paper Owner",
+        commenterName: "Comment Author",
+        commentText: "<p>Comment body</p>",
+        commentTimestamp: "2026-03-27T10:05:00.000Z",
+        commentUrl: "https://nubianresearch.com/paper/test-paper#23",
+        allCommentsUrl: "https://nubianresearch.com/paper/test-paper",
+        paperUrl: "https://nubianresearch.com/paper/test-paper",
+        replyUrl: "https://nubianresearch.com/paper/test-paper#23",
+      },
+    });
+
+    expect(mailService.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        html: expect.stringContaining("left a comment on your post"),
+      }),
+    );
   });
 });
