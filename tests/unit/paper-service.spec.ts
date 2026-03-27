@@ -35,39 +35,57 @@ describe("PaperService.renderCommentBody", () => {
     expect(comment.bodyMarkdown).toBe("**This is a comment**");
   });
 
-  it("should not convert markdown headings to HTML heading tags", async ({
-    expect,
-  }) => {
+  it("converts h1 markdown heading to h4 HTML heading", async ({ expect }) => {
     const paperService = new PaperService(new MailService());
 
     const heading1 = paperService.renderCommentBody("# This is a comment");
 
-    expect(heading1.bodyHtml).toBe("This is a comment\n");
+    expect(heading1.bodyHtml).toBe("<h4>This is a comment</h4>\n");
     expect(heading1.bodyMarkdown).toBe("# This is a comment");
+  });
+
+  it("converts h2 markdown heading to h4 HTML heading", async ({ expect }) => {
+    const paperService = new PaperService(new MailService());
 
     const heading2 = paperService.renderCommentBody("## This is a comment");
 
-    expect(heading2.bodyHtml).toBe("This is a comment\n");
+    expect(heading2.bodyHtml).toBe("<h4>This is a comment</h4>\n");
     expect(heading2.bodyMarkdown).toBe("## This is a comment");
+  });
+
+  it("converts h3 markdown heading to h4 HTML heading", async ({ expect }) => {
+    const paperService = new PaperService(new MailService());
 
     const heading3 = paperService.renderCommentBody("### This is a comment");
 
-    expect(heading3.bodyHtml).toBe("This is a comment\n");
+    expect(heading3.bodyHtml).toBe("<h4>This is a comment</h4>\n");
     expect(heading3.bodyMarkdown).toBe("### This is a comment");
+  });
+
+  it("preserves h4 markdown heading as h4 HTML heading", async ({ expect }) => {
+    const paperService = new PaperService(new MailService());
 
     const heading4 = paperService.renderCommentBody("#### This is a comment");
 
-    expect(heading4.bodyHtml).toBe("This is a comment\n");
+    expect(heading4.bodyHtml).toBe("<h4>This is a comment</h4>\n");
     expect(heading4.bodyMarkdown).toBe("#### This is a comment");
+  });
+
+  it("preserves h5 markdown heading as h5 HTML heading", async ({ expect }) => {
+    const paperService = new PaperService(new MailService());
 
     const heading5 = paperService.renderCommentBody("##### This is a comment");
 
-    expect(heading5.bodyHtml).toBe("This is a comment\n");
+    expect(heading5.bodyHtml).toBe("<h5>This is a comment</h5>\n");
     expect(heading5.bodyMarkdown).toBe("##### This is a comment");
+  });
+
+  it("preserves h6 markdown heading as h6 HTML heading", async ({ expect }) => {
+    const paperService = new PaperService(new MailService());
 
     const heading6 = paperService.renderCommentBody("###### This is a comment");
 
-    expect(heading6.bodyHtml).toBe("This is a comment\n");
+    expect(heading6.bodyHtml).toBe("<h6>This is a comment</h6>\n");
     expect(heading6.bodyMarkdown).toBe("###### This is a comment");
   });
 

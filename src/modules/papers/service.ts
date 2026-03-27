@@ -10,11 +10,40 @@ import {
   CommentNotificationRecipient,
 } from "./types";
 
-const markdown = new MarkdownIt({
-  html: false,
-  linkify: true,
-  breaks: true,
-});
+const initializeMarkdown = () => {
+  const markdown = new MarkdownIt({
+    html: false,
+    linkify: true,
+    breaks: true,
+  });
+
+  // Force all h1–h3 to render as h4
+  markdown.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
+    const token = tokens[idx];
+    const level = Number(token.tag.slice(1)); // 1–6
+
+    if (level >= 1 && level <= 3) {
+      token.tag = "h4";
+    }
+
+    return self.renderToken(tokens, idx, options);
+  };
+
+  markdown.renderer.rules.heading_close = (tokens, idx, options, env, self) => {
+    const token = tokens[idx];
+    const level = Number(token.tag.slice(1));
+
+    if (level >= 1 && level <= 3) {
+      token.tag = "h4";
+    }
+
+    return self.renderToken(tokens, idx, options);
+  };
+
+  return markdown;
+};
+
+const markdown = initializeMarkdown();
 
 const sanitizeOptions: sanitizeHtml.IOptions = {
   allowedTags: [
@@ -29,6 +58,9 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
     "pre",
     "blockquote",
     "br",
+    "h4",
+    "h5",
+    "h6",
   ],
   allowedAttributes: {
     a: ["href", "title", "class", "target", "rel"],

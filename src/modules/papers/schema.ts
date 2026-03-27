@@ -62,6 +62,18 @@ export const createPaperCommentSchema = z.object({
     .optional(),
 });
 
+export const updatePaperCommentSchema = z.object({
+  body: z
+    .string()
+    .transform((value) => value.trim())
+    .refine((value) => value.length > 0, {
+      message: "Comment body cannot be empty",
+    })
+    .refine((value) => value.length <= MAX_COMMENT_LENGTH, {
+      message: `Comment body must be at most ${MAX_COMMENT_LENGTH} characters long`,
+    }),
+});
+
 export const getPaperCommentsParamsSchema = z.object({
   cursor: z.preprocess((v) => Number(v), z.number()).optional(),
   limit: z
@@ -74,4 +86,9 @@ export const getPaperCommentsParamsSchema = z.object({
 
 export const paperIdInPath = z.object({
   paperId: z.preprocess((v) => Number(v), z.number()),
+});
+
+export const commentIdInPath = z.object({
+  paperId: z.preprocess((v) => Number(v), z.number()),
+  commentId: z.preprocess((v) => Number(v), z.number()),
 });

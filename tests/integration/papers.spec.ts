@@ -985,8 +985,7 @@ describe("POST /papers/{paperId}/comments", () => {
       .expect("Content-Type", /json/)
       .expect(201);
 
-    // Never return the markdown content to the client, the client doesn't use it.
-    expect("bodyMarkdown" in res.body).toBe(false);
+    expect(res.body).toHaveProperty("bodyMarkdown");
     expect(res.body).toHaveProperty("bodyHtml", `<p>${commentBody}</p>\n`);
     expect(res.body).toHaveProperty("authorId", testUser.id);
     expect(res.body).toHaveProperty("paperId", testPaper.id);
@@ -1039,8 +1038,7 @@ describe("POST /papers/{paperId}/comments", () => {
 
     expect(res.body).toHaveProperty("parentCommentId", testComment.id);
 
-    // Never return the markdown content to the client, the client doesn't use it.
-    expect("bodyMarkdown" in res.body).toBe(false);
+    expect(res.body).toHaveProperty("bodyMarkdown");
     expect(res.body).toHaveProperty("bodyHtml", `<p>${commentBody}</p>\n`);
     expect(res.body).toHaveProperty("authorId", testUser.id);
     expect(res.body).toHaveProperty("paperId", testPaper.id);
@@ -1265,5 +1263,272 @@ describe("GET /papers/{paperId}/comments", () => {
     const returnedIds = res.body.data.map((c: any) => c.id);
     expect(returnedIds).toContain(reply1.id);
     expect(returnedIds).toContain(reply2.id);
+  });
+});
+
+describe("PUT /papers/{paperId}/comments/{commentId}", () => {
+  it("requires authentication", async ({ expect }) => {
+    const res = await api
+      .put("/papers/1/comments/1")
+      .send({ body: "Updated comment" })
+      .expect("Content-Type", /json/)
+      .expect(401);
+
+    expect(res.body).toHaveProperty(
+      "message",
+      "Authentication required. Please sign in to continue.",
+    );
+  });
+
+  it("returns 404 when paper is not found", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+
+    const res = await api
+      .put("/papers/999999/comments/1")
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .send({ body: "Updated comment" })
+      .expect("Content-Type", /json/)
+      .expect(404);
+
+    expect(res.body).toHaveProperty("error", "Paper not found");
+  });
+
+  it("returns 404 when comment is not found", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({ status: "published" });
+
+    const res = await api
+      .put(`/papers/${testPaper.id}/comments/999999`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .send({ body: "Updated comment" })
+      .expect("Content-Type", /json/)
+      .expect(404);
+
+    expect(res.body).toHaveProperty("error", "Comment not found");
+  });
+
+  it("does not allow paper owners to update comments written by other users", async ({
+    expect,
+  }) => {
+    const paperOwner = await UserFactory.create({
+      email: "owner@example.com",
+    });
+    const commentAuthor = await UserFactory.create({
+      email: "author@example.com",
+    });
+
+    const paper = await PaperFactory.create({
+      status: "published",
+      userId: paperOwner.id,
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    const comment = await paperCommentFactory.create({
+      paperId: paper.id,
+      authorId: commentAuthor.id,
+      body: "Original comment",
+      parentCommentId: null,
+    });
+
+    const resAsOwner = await api
+      .put(`/papers/${paper.id}/comments/${comment.id}`)
+      .set("Authorization", `Bearer ${paperOwner.authToken}`)
+      .send({ body: "Updated comment" })
+      .expect("Content-Type", /json/)
+      .expect(403);
+
+    expect(resAsOwner.body).toHaveProperty("error", "Forbidden request");
+  });
+
+  it("allows comment authors to update their own comments", async ({
+    expect,
+  }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({
+      status: "published",
+      userId: testUser.id,
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    const comment = await paperCommentFactory.create({
+      paperId: testPaper.id,
+      authorId: testUser.id,
+      body: "Original comment",
+      parentCommentId: null,
+    });
+
+    const updatedBody = "Updated comment body";
+
+    const res = await api
+      .put(`/papers/${testPaper.id}/comments/${comment.id}`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .send({ body: updatedBody })
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(res.body).toHaveProperty("bodyMarkdown");
+    expect(res.body).toHaveProperty("bodyHtml", `<p>${updatedBody}</p>\n`);
+    expect(res.body).toHaveProperty("authorId", testUser.id);
+    expect(res.body).toHaveProperty("paperId", testPaper.id);
+  });
+
+});
+
+describe("DELETE /papers/{paperId}/comments/{commentId}", () => {
+  it("requires authentication", async ({ expect }) => {
+    const res = await api
+      .delete("/papers/1/comments/1")
+      .expect("Content-Type", /json/)
+      .expect(401);
+
+    expect(res.body).toHaveProperty(
+      "message",
+      "Authentication required. Please sign in to continue.",
+    );
+  });
+
+  it("returns 404 when paper is not found", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+
+    const res = await api
+      .delete("/papers/999999/comments/1")
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(404);
+
+    expect(res.body).toHaveProperty("error", "Paper not found");
+  });
+
+  it("returns 404 when comment is not found", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({ status: "published" });
+
+    const res = await api
+      .delete(`/papers/${testPaper.id}/comments/999999`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(404);
+
+    expect(res.body).toHaveProperty("error", "Comment not found");
+  });
+
+  it("does not allow non-authors (who are not paper owners) to delete comments", async ({
+    expect,
+  }) => {
+    const paperOwner = await UserFactory.create({
+      email: "owner@example.com",
+    });
+    const commentAuthor = await UserFactory.create({
+      email: "author@example.com",
+    });
+    const otherUser = await UserFactory.create({
+      email: "other@example.com",
+    });
+
+    const paper = await PaperFactory.create({
+      status: "published",
+      userId: paperOwner.id,
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    const comment = await paperCommentFactory.create({
+      paperId: paper.id,
+      authorId: commentAuthor.id,
+      body: "Original comment",
+      parentCommentId: null,
+    });
+
+    const res = await api
+      .delete(`/papers/${paper.id}/comments/${comment.id}`)
+      .set("Authorization", `Bearer ${otherUser.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(403);
+
+    expect(res.body).toHaveProperty("error", "Forbidden request");
+  });
+
+  it("allows comment authors to delete their own comments", async ({
+    expect,
+  }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({
+      status: "published",
+      userId: testUser.id,
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    const comment = await paperCommentFactory.create({
+      paperId: testPaper.id,
+      authorId: testUser.id,
+      body: "Comment to delete",
+      parentCommentId: null,
+    });
+
+    const res = await api
+      .delete(`/papers/${testPaper.id}/comments/${comment.id}`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(res.body).toHaveProperty("message", "Comment deleted successfully");
+  });
+
+  it("allows paper owners to delete comments on their papers (including replies)", async ({
+    expect,
+  }) => {
+    const paperOwner = await UserFactory.create({
+      email: "owner@example.com",
+    });
+    const commentAuthor = await UserFactory.create({
+      email: "author@example.com",
+    });
+
+    const paper = await PaperFactory.create({
+      status: "published",
+      userId: paperOwner.id,
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    const parentComment = await paperCommentFactory.create({
+      paperId: paper.id,
+      authorId: commentAuthor.id,
+      body: "Parent comment to delete",
+      parentCommentId: null,
+    });
+
+    await paperCommentFactory.create({
+      paperId: paper.id,
+      authorId: commentAuthor.id,
+      body: "Reply comment",
+      parentCommentId: parentComment.id,
+    });
+
+    const res = await api
+      .delete(`/papers/${paper.id}/comments/${parentComment.id}`)
+      .set("Authorization", `Bearer ${paperOwner.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(res.body).toHaveProperty("message", "Comment deleted successfully");
+
+    const listRes = await api
+      .get(`/papers/${paper.id}/comments`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(Array.isArray(listRes.body.data)).toBe(true);
+    expect(listRes.body.data).toHaveLength(0);
   });
 });

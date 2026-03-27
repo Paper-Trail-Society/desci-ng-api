@@ -1,10 +1,9 @@
-import { and, asc, desc, eq, gt, gte, isNull, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull, lt, or } from "drizzle-orm";
 import { db } from "../../config/db";
 import {
   papersTable,
   paperCommentsTable,
   usersTable,
-  SelectPaper,
 } from "../../db/schema";
 import { PaperComment } from "./types";
 
@@ -39,8 +38,8 @@ export class PaperRepository {
         paperId: paperCommentsTable.paperId,
         authorId: paperCommentsTable.authorId,
         parentCommentId: paperCommentsTable.parentCommentId,
-        bodyMarkdown: paperCommentsTable.bodyMarkdown,
         bodyHtml: paperCommentsTable.bodyHtml,
+        bodyMarkdown: paperCommentsTable.bodyMarkdown,
         createdAt: paperCommentsTable.createdAt,
         updatedAt: paperCommentsTable.updatedAt,
         author: {
@@ -80,6 +79,7 @@ export class PaperRepository {
         paperId: paperCommentsTable.paperId,
         authorId: paperCommentsTable.authorId,
         bodyHtml: paperCommentsTable.bodyHtml,
+        bodyMarkdown: paperCommentsTable.bodyMarkdown,
         createdAt: paperCommentsTable.createdAt,
         updatedAt: paperCommentsTable.updatedAt
       })
@@ -203,5 +203,56 @@ export class PaperRepository {
       .execute();
 
     return !!comment;
+  };
+
+  public updateComment = async (params: {
+    paperId: number;
+    commentId: number;
+    bodyMarkdown: string;
+    bodyHtml: string;
+  }) => {
+    const [comment] = await db
+      .update(paperCommentsTable)
+      .set({
+        bodyMarkdown: params.bodyMarkdown,
+        bodyHtml: params.bodyHtml,
+      })
+      .where(
+        and(
+          eq(paperCommentsTable.id, params.commentId),
+          eq(paperCommentsTable.paperId, params.paperId),
+        ),
+      )
+      .returning({
+        id: paperCommentsTable.id,
+        parentCommentId: paperCommentsTable.parentCommentId,
+        paperId: paperCommentsTable.paperId,
+        authorId: paperCommentsTable.authorId,
+        bodyHtml: paperCommentsTable.bodyHtml,
+        bodyMarkdown: paperCommentsTable.bodyMarkdown,
+        createdAt: paperCommentsTable.createdAt,
+        updatedAt: paperCommentsTable.updatedAt,
+      })
+      .execute();
+
+    return comment ?? null;
+  };
+
+  public deleteCommentWithReplies = async (params: {
+    paperId: number;
+    commentId: number;
+  }) => {
+    await db
+      .delete(paperCommentsTable)
+      .where(
+        and(
+          eq(paperCommentsTable.paperId, params.paperId),
+          or(
+            eq(paperCommentsTable.id, params.commentId),
+            eq(paperCommentsTable.parentCommentId, params.commentId),
+          ),
+        ),
+      )
+      .execute();
   };
 }

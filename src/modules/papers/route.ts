@@ -9,6 +9,8 @@ import {
   getPaperSchema,
   createPaperCommentSchema,
   getPaperCommentsParamsSchema,
+  commentIdInPath,
+  updatePaperCommentSchema,
 } from "./schema";
 import z from "zod";
 import { authMiddleware } from "../../middlewares/auth";
@@ -97,4 +99,19 @@ papersRouter.get(
   validateRequest("params", z.object({ paperId: z.preprocess((v) => Number(v), z.number()) })),
   validateRequest("query", getPaperCommentsParamsSchema),
   papersController.listComments,
+);
+
+papersRouter.put(
+  "/papers/:paperId/comments/:commentId",
+  authMiddleware({}),
+  validateRequest("params", commentIdInPath),
+  validateRequest("body", updatePaperCommentSchema),
+  papersController.updateComment,
+);
+
+papersRouter.delete(
+  "/papers/:paperId/comments/:commentId",
+  authMiddleware({}),
+  validateRequest("params", commentIdInPath),
+  papersController.deleteComment,
 );
