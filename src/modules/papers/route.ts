@@ -9,15 +9,22 @@ import {
   getPaperSchema,
   createPaperCommentSchema,
   getPaperCommentsParamsSchema,
+  commentIdInPath,
+  updatePaperCommentSchema,
 } from "./schema";
 import z from "zod";
 import { authMiddleware } from "../../middlewares/auth";
 import { adminAuthMiddleware } from "../../middlewares/auth/admin-auth";
 import ApiError from "../../utils/api-error";
-import { PapersRepository } from "./repository";
+import { PaperRepository } from "./repository";
+import { PaperService } from "./service";
+import MailService from "../../utils/email/mail-service";
 
 export const papersRouter = Router();
-const papersController = new PapersController(new PapersRepository());
+const mailService = new MailService();
+const paperService = new PaperService(mailService);
+const paperRepository = new PaperRepository();
+const papersController = new PapersController(paperRepository, paperService);
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -92,4 +99,19 @@ papersRouter.get(
   validateRequest("params", z.object({ paperId: z.preprocess((v) => Number(v), z.number()) })),
   validateRequest("query", getPaperCommentsParamsSchema),
   papersController.listComments,
+);
+
+papersRouter.put(
+  "/papers/:paperId/comments/:commentId",
+  authMiddleware({}),
+  validateRequest("params", commentIdInPath),
+  validateRequest("body", updatePaperCommentSchema),
+  papersController.updateComment,
+);
+
+papersRouter.delete(
+  "/papers/:paperId/comments/:commentId",
+  authMiddleware({}),
+  validateRequest("params", commentIdInPath),
+  papersController.deleteComment,
 );

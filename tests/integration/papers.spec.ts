@@ -8,7 +8,6 @@ import { UserFactory } from "../factories/user-factory";
 import { CategoryFactory } from "../factories/field-factory";
 import { ipfsService } from "../../src/utils/ipfs";
 import { PaperCommentFactory } from "../factories/paper-comment-factory";
-import { PapersRepository } from "../../src/modules/papers/repository";
 
 const TEST_CID = "mock-cid";
 const TEST_PDF_BUFFER = Buffer.from("%PDF-1.4 Test PDF content");
@@ -19,6 +18,12 @@ vi.mock("../../src/utils/ipfs", () => ({
     deleteFilesByCid: vi.fn().mockResolvedValue({}),
     getFileByCid: vi.fn().mockResolvedValue({ id: "mock-ipfs-id" }),
   },
+}));
+
+vi.mock("../../src/utils/mail-service", () => ({
+  MailService: vi.fn().mockImplementation(() => ({
+    send: vi.fn(),
+  })),
 }));
 
 const api = request(app);
@@ -85,7 +90,9 @@ describe("GET /papers", () => {
     expect(res.body.data[0]).toHaveProperty("id", paper1.id);
   });
 
-  it("allows searching papers by author name using general search", async ({ expect }) => {
+  it("allows searching papers by author name using general search", async ({
+    expect,
+  }) => {
     const author = await UserFactory.create({ name: "John Doe" });
     const paper = await PaperFactory.create({
       title: "Some Paper",
@@ -102,10 +109,7 @@ describe("GET /papers", () => {
     });
 
     // Test general search param including author name
-    const res = await api
-      .get("/papers")
-      .query({ search: "Doe" })
-      .expect(200);
+    const res = await api.get("/papers").query({ search: "Doe" }).expect(200);
 
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].id).toBe(paper.id);
@@ -971,7 +975,8 @@ describe("POST /papers/{paperId}/comments", () => {
     });
     const testPaper = await PaperFactory.create({ status: "published" });
 
-    const commentBody = "This is a comment";
+    const commentBody =
+      "One of the best works I have read on multiplanetary and space research is this one. I appreciate it especially because it emphasizes the humanitarian dimension of space exploration. As you explained, who governs is not necessarily the most important factor; rather, what truly matters is the system and the laws that are established. Governance becomes meaningful only when it creates structures that promote fairness, cooperation, and long-term progress. We must also recognize that we now live in a world increasingly characterized by abundance (even in space; because of knowledge created). Unlike the past, when knowledge and resources were scarce and competition often resembled a zero-sum game, modern technological and scientific development suggests that collaboration can create expanding opportunities for everyone. For this reason, the real competition today should not merely be about dominance, but about creating knowledge and developing technologies that address seemingly inevitable challenges. In the context of space exploration, such challenges include radiation exposure, adaptation to different gravitational environments, and the biological limits of human life beyond Earth. Ultimately, what can be said is that humans are remarkable in their ability to continuously invent ways to make life easier, safer, and better. Our drive to solve problems and expand the frontiers of knowledge is what makes our species unique.";
 
     const res = await api
       .post(`/papers/${testPaper.id}/comments`)
@@ -980,7 +985,7 @@ describe("POST /papers/{paperId}/comments", () => {
       .expect("Content-Type", /json/)
       .expect(201);
 
-    expect(res.body).toHaveProperty("bodyMarkdown", commentBody);
+    expect(res.body).toHaveProperty("bodyMarkdown");
     expect(res.body).toHaveProperty("bodyHtml", `<p>${commentBody}</p>\n`);
     expect(res.body).toHaveProperty("authorId", testUser.id);
     expect(res.body).toHaveProperty("paperId", testPaper.id);
@@ -1012,8 +1017,11 @@ describe("POST /papers/{paperId}/comments", () => {
     });
     const testPaper = await PaperFactory.create({ status: "published" });
     const paperCommentFactory = new PaperCommentFactory();
+    const parentCommentBody =
+      "One of the best works I have read on multiplanetary and space research is this one. I appreciate it especially because it emphasizes the humanitarian dimension of space exploration. As you explained, who governs is not necessarily the most important factor; rather, what truly matters is the system and the laws that are established. Governance becomes meaningful only when it creates structures that promote fairness, cooperation, and long-term progress. We must also recognize that we now live in a world increasingly characterized by abundance (even in space; because of knowledge created). Unlike the past, when knowledge and resources were scarce and competition often resembled a zero-sum game, modern technological and scientific development suggests that collaboration can create expanding opportunities for everyone. For this reason, the real competition today should not merely be about dominance, but about creating knowledge and developing technologies that address seemingly inevitable challenges. In the context of space exploration, such challenges include radiation exposure, adaptation to different gravitational environments, and the biological limits of human life beyond Earth. Ultimately, what can be said is that humans are remarkable in their ability to continuously invent ways to make life easier, safer, and better. Our drive to solve problems and expand the frontiers of knowledge is what makes our species unique.";
+
     const testComment = await paperCommentFactory.create({
-      body: "This is a test comment",
+      body: parentCommentBody,
       paperId: testPaper.id,
       authorId: testUser.id,
       parentCommentId: null,
@@ -1029,7 +1037,8 @@ describe("POST /papers/{paperId}/comments", () => {
       .expect(201);
 
     expect(res.body).toHaveProperty("parentCommentId", testComment.id);
-    expect(res.body).toHaveProperty("bodyMarkdown", commentBody);
+
+    expect(res.body).toHaveProperty("bodyMarkdown");
     expect(res.body).toHaveProperty("bodyHtml", `<p>${commentBody}</p>\n`);
     expect(res.body).toHaveProperty("authorId", testUser.id);
     expect(res.body).toHaveProperty("paperId", testPaper.id);
@@ -1210,7 +1219,9 @@ describe("GET /papers/{paperId}/comments", () => {
     expect(res.body.data[0].id).toBe(parentComment.id);
   });
 
-  it("should return replies when parentCommentId is provided", async ({ expect }) => {
+  it("should return replies when parentCommentId is provided", async ({
+    expect,
+  }) => {
     const testUser = await UserFactory.create({
       email: "test@example.com",
     });
@@ -1241,7 +1252,9 @@ describe("GET /papers/{paperId}/comments", () => {
     });
 
     const res = await api
-      .get(`/papers/${testPaper.id}/comments?parentCommentId=${parentComment.id}`)
+      .get(
+        `/papers/${testPaper.id}/comments?parentCommentId=${parentComment.id}`,
+      )
       .expect("Content-Type", /json/)
       .expect(200);
 
@@ -1250,5 +1263,272 @@ describe("GET /papers/{paperId}/comments", () => {
     const returnedIds = res.body.data.map((c: any) => c.id);
     expect(returnedIds).toContain(reply1.id);
     expect(returnedIds).toContain(reply2.id);
+  });
+});
+
+describe("PUT /papers/{paperId}/comments/{commentId}", () => {
+  it("requires authentication", async ({ expect }) => {
+    const res = await api
+      .put("/papers/1/comments/1")
+      .send({ body: "Updated comment" })
+      .expect("Content-Type", /json/)
+      .expect(401);
+
+    expect(res.body).toHaveProperty(
+      "message",
+      "Authentication required. Please sign in to continue.",
+    );
+  });
+
+  it("returns 404 when paper is not found", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+
+    const res = await api
+      .put("/papers/999999/comments/1")
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .send({ body: "Updated comment" })
+      .expect("Content-Type", /json/)
+      .expect(404);
+
+    expect(res.body).toHaveProperty("error", "Paper not found");
+  });
+
+  it("returns 404 when comment is not found", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({ status: "published" });
+
+    const res = await api
+      .put(`/papers/${testPaper.id}/comments/999999`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .send({ body: "Updated comment" })
+      .expect("Content-Type", /json/)
+      .expect(404);
+
+    expect(res.body).toHaveProperty("error", "Comment not found");
+  });
+
+  it("does not allow paper owners to update comments written by other users", async ({
+    expect,
+  }) => {
+    const paperOwner = await UserFactory.create({
+      email: "owner@example.com",
+    });
+    const commentAuthor = await UserFactory.create({
+      email: "author@example.com",
+    });
+
+    const paper = await PaperFactory.create({
+      status: "published",
+      userId: paperOwner.id,
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    const comment = await paperCommentFactory.create({
+      paperId: paper.id,
+      authorId: commentAuthor.id,
+      body: "Original comment",
+      parentCommentId: null,
+    });
+
+    const resAsOwner = await api
+      .put(`/papers/${paper.id}/comments/${comment.id}`)
+      .set("Authorization", `Bearer ${paperOwner.authToken}`)
+      .send({ body: "Updated comment" })
+      .expect("Content-Type", /json/)
+      .expect(403);
+
+    expect(resAsOwner.body).toHaveProperty("error", "Forbidden request");
+  });
+
+  it("allows comment authors to update their own comments", async ({
+    expect,
+  }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({
+      status: "published",
+      userId: testUser.id,
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    const comment = await paperCommentFactory.create({
+      paperId: testPaper.id,
+      authorId: testUser.id,
+      body: "Original comment",
+      parentCommentId: null,
+    });
+
+    const updatedBody = "Updated comment body";
+
+    const res = await api
+      .put(`/papers/${testPaper.id}/comments/${comment.id}`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .send({ body: updatedBody })
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(res.body).toHaveProperty("bodyMarkdown");
+    expect(res.body).toHaveProperty("bodyHtml", `<p>${updatedBody}</p>\n`);
+    expect(res.body).toHaveProperty("authorId", testUser.id);
+    expect(res.body).toHaveProperty("paperId", testPaper.id);
+  });
+
+});
+
+describe("DELETE /papers/{paperId}/comments/{commentId}", () => {
+  it("requires authentication", async ({ expect }) => {
+    const res = await api
+      .delete("/papers/1/comments/1")
+      .expect("Content-Type", /json/)
+      .expect(401);
+
+    expect(res.body).toHaveProperty(
+      "message",
+      "Authentication required. Please sign in to continue.",
+    );
+  });
+
+  it("returns 404 when paper is not found", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+
+    const res = await api
+      .delete("/papers/999999/comments/1")
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(404);
+
+    expect(res.body).toHaveProperty("error", "Paper not found");
+  });
+
+  it("returns 404 when comment is not found", async ({ expect }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({ status: "published" });
+
+    const res = await api
+      .delete(`/papers/${testPaper.id}/comments/999999`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(404);
+
+    expect(res.body).toHaveProperty("error", "Comment not found");
+  });
+
+  it("does not allow non-authors (who are not paper owners) to delete comments", async ({
+    expect,
+  }) => {
+    const paperOwner = await UserFactory.create({
+      email: "owner@example.com",
+    });
+    const commentAuthor = await UserFactory.create({
+      email: "author@example.com",
+    });
+    const otherUser = await UserFactory.create({
+      email: "other@example.com",
+    });
+
+    const paper = await PaperFactory.create({
+      status: "published",
+      userId: paperOwner.id,
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    const comment = await paperCommentFactory.create({
+      paperId: paper.id,
+      authorId: commentAuthor.id,
+      body: "Original comment",
+      parentCommentId: null,
+    });
+
+    const res = await api
+      .delete(`/papers/${paper.id}/comments/${comment.id}`)
+      .set("Authorization", `Bearer ${otherUser.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(403);
+
+    expect(res.body).toHaveProperty("error", "Forbidden request");
+  });
+
+  it("allows comment authors to delete their own comments", async ({
+    expect,
+  }) => {
+    const testUser = await UserFactory.create({
+      email: "test@example.com",
+    });
+    const testPaper = await PaperFactory.create({
+      status: "published",
+      userId: testUser.id,
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    const comment = await paperCommentFactory.create({
+      paperId: testPaper.id,
+      authorId: testUser.id,
+      body: "Comment to delete",
+      parentCommentId: null,
+    });
+
+    const res = await api
+      .delete(`/papers/${testPaper.id}/comments/${comment.id}`)
+      .set("Authorization", `Bearer ${testUser.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(res.body).toHaveProperty("message", "Comment deleted successfully");
+  });
+
+  it("allows paper owners to delete comments on their papers (including replies)", async ({
+    expect,
+  }) => {
+    const paperOwner = await UserFactory.create({
+      email: "owner@example.com",
+    });
+    const commentAuthor = await UserFactory.create({
+      email: "author@example.com",
+    });
+
+    const paper = await PaperFactory.create({
+      status: "published",
+      userId: paperOwner.id,
+    });
+
+    const paperCommentFactory = new PaperCommentFactory();
+    const parentComment = await paperCommentFactory.create({
+      paperId: paper.id,
+      authorId: commentAuthor.id,
+      body: "Parent comment to delete",
+      parentCommentId: null,
+    });
+
+    await paperCommentFactory.create({
+      paperId: paper.id,
+      authorId: commentAuthor.id,
+      body: "Reply comment",
+      parentCommentId: parentComment.id,
+    });
+
+    const res = await api
+      .delete(`/papers/${paper.id}/comments/${parentComment.id}`)
+      .set("Authorization", `Bearer ${paperOwner.authToken}`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(res.body).toHaveProperty("message", "Comment deleted successfully");
+
+    const listRes = await api
+      .get(`/papers/${paper.id}/comments`)
+      .expect("Content-Type", /json/)
+      .expect(200);
+
+    expect(Array.isArray(listRes.body.data)).toBe(true);
+    expect(listRes.body.data).toHaveLength(0);
   });
 });

@@ -1,5 +1,4 @@
-import { PapersRepository } from "../../src/modules/papers/repository";
-import { PaperComment } from "../../src/modules/papers/types";
+import { PaperRepository } from "../../src/modules/papers/repository";
 
 type CreateCommentOptions = {
   body: string;
@@ -11,10 +10,10 @@ type CreateCommentOptions = {
 export class PaperCommentFactory {
   private static commentCounter = 1;
 
-  private paperRepository: PapersRepository;
+  private paperRepository: PaperRepository;
 
   constructor() {
-    this.paperRepository = new PapersRepository();
+    this.paperRepository = new PaperRepository();
   }
 
   async create(options: CreateCommentOptions) {
