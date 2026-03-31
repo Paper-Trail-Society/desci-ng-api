@@ -1181,8 +1181,9 @@ describe("GET /papers/{paperId}/comments", () => {
 
     expect(res.body).toHaveProperty("data");
     expect(res.body.data).toHaveLength(10);
-
-    expect(firstCommentCreatedAt < secondCommentCreatedAt).toBe(true);
+    expect(firstCommentCreatedAt.getTime()).toBeLessThan(
+      secondCommentCreatedAt.getTime(),
+    );
   });
 
   it("should only return top-level comments by default", async ({ expect }) => {
