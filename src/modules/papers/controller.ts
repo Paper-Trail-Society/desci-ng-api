@@ -24,19 +24,30 @@ import slug from "slug";
 import { createKeyword } from "../../modules/keywords/service";
 import { ipfsService } from "../../utils/ipfs";
 import { buildOffsetPaginationLinks } from "../../utils/paginator";
-import { PaginatedPapersResponse, Paper } from "./types";
+import {
+  CommentNotificationRecipient,
+  PaginatedPapersResponse,
+  Paper,
+} from "./types";
 import {
   createPaperCommentSchema,
   getPaperCommentsParamsSchema,
+  commentIdInPath,
+  updatePaperCommentSchema,
 } from "./schema";
-import { PapersRepository } from "./repository";
-import { renderCommentBody } from "./service";
+import { PaperRepository } from "./repository";
+import { PaperService } from "./service";
 
 export class PapersController {
-  private readonly papersRepository: PapersRepository;
+  private readonly papersRepository: PaperRepository;
+  private readonly paperService: PaperService;
 
-  public constructor(papersRepository: PapersRepository) {
+  public constructor(
+    papersRepository: PaperRepository,
+    paperService: PaperService,
+  ) {
     this.papersRepository = papersRepository;
+    this.paperService = paperService;
   }
 
   public create = async (req: MulterRequest, res: Response) => {
@@ -713,14 +724,16 @@ export class PapersController {
   };
 
   public createComment = async (req: Request, res: Response) => {
+    if (!req.user) return;
     const { paperId } = paperIdInPath.parse(req.params);
     const { body, parentCommentId } = createPaperCommentSchema.parse(req.body);
 
-    if (!req.user) {
-      return res.status(401).json({
-        message: "Authentication required. Please sign in to continue.",
-      });
-    }
+    req.ctx.set("payload", {
+      paperId,
+      parentCommentId: parentCommentId ?? null,
+      userId: req.user?.id,
+      body,
+    });
 
     const paper = await this.papersRepository.findPaperById(paperId);
 
@@ -733,6 +746,10 @@ export class PapersController {
     if (paper.status !== "published") {
       // if the commenter is the author of the paper
       if (req.user && req.user.id == paper.userId) {
+        req.log.warn(
+          { paperId, userId: req.user.id },
+          "Author attempted to comment on unpublished paper",
+        );
         return res.status(403).json({
           error: "Cannot comment on unpublished paper",
         });
@@ -742,22 +759,47 @@ export class PapersController {
       });
     }
 
-    if (parentCommentId !== undefined) {
-      const isTopLevelCommentOnPaper =
-        await this.papersRepository.doesTopLevelCommentBelongToPaper(
-          parentCommentId,
-          paperId,
-        );
+    let notificationRecipient: CommentNotificationRecipient = {
+      name: paper.author.name,
+      email: paper.author.email,
+    };
 
-      if (!isTopLevelCommentOnPaper) {
+    let inReplyToText: string | null = null;
+
+    const commentPreviewLengthInNotification = 200;
+
+    if (parentCommentId) {
+      const parentComment = await this.papersRepository.getPaperCommentById(
+        paperId,
+        parentCommentId,
+      );
+
+      if (!parentComment) {
+        return res.status(400).json({
+          error: "Parent comment doesn't exist for this paper",
+        });
+      }
+
+      const isNotParentComment = parentComment.parentCommentId !== null;
+      if (isNotParentComment) {
         return res.status(400).json({
           error:
             "Invalid parent comment. Replies are only allowed on top-level comments for this paper.",
         });
       }
+      notificationRecipient = {
+        name: parentComment.author.name,
+        email: parentComment.author.email,
+      };
+
+      inReplyToText =
+        parentComment.bodyMarkdown.length > commentPreviewLengthInNotification
+          ? `${parentComment.bodyMarkdown.slice(0, commentPreviewLengthInNotification)}...`
+          : parentComment.bodyMarkdown;
     }
 
-    const { bodyMarkdown, bodyHtml } = renderCommentBody(body);
+    const { bodyMarkdown, bodyHtml } =
+      this.paperService.renderCommentBody(body);
 
     const comment = await this.papersRepository.createComment({
       paperId,
@@ -767,6 +809,47 @@ export class PapersController {
       bodyHtml,
     });
 
+    const notificationTitle = parentCommentId
+      ? `${req.user.name} replied to your comment`
+      : `New comment on your post`;
+
+    // fire async operation without wait: send notification to the comment
+    // TODO: move this to bg (implement transactional outbox messaging for comment notification)
+    if (process.env.ENABLE_COMMENT_NOTIFICATIONS == "true") {
+      const commentText =
+        comment.bodyHtml.length > commentPreviewLengthInNotification
+          ? `${comment.bodyHtml.slice(0, commentPreviewLengthInNotification)}...`
+          : comment.bodyHtml;
+
+      req.log.info(
+        {
+          paperId,
+          commentId: comment.id,
+          userId: req.user.id,
+          parentCommentId: parentCommentId ?? null,
+        },
+        "Sending comment notification",
+      );
+      this.paperService.sendCommentNotification({
+        subject: notificationTitle,
+        recipient: notificationRecipient,
+        parameters: {
+          paperTitle: paper.title,
+          paperAuthorName: paper.author.name,
+          entity: parentCommentId ? "comment" : "post",
+          notificationTitle,
+          commenterName: req.user.name,
+          commentText,
+          commentTimestamp: comment.createdAt.toISOString(),
+          commentUrl: this.paperService.buildCommentUrl(paper.slug, comment.id),
+          replyUrl: this.paperService.buildCommentUrl(paper.slug, comment.id),
+          inReplyToText: inReplyToText ?? undefined,
+          allCommentsUrl: this.paperService.buildPaperUrl(paper.slug),
+          paperUrl: this.paperService.buildPaperUrl(paper.slug),
+        },
+      });
+    }
+
     return res.status(201).json(comment);
   };
 
@@ -774,6 +857,7 @@ export class PapersController {
     const { paperId } = paperIdInPath.parse(req.params);
     const { limit, cursor, sortDir, parentCommentId } =
       getPaperCommentsParamsSchema.parse(req.query);
+
 
     const paper = await this.papersRepository.findPaperById(paperId);
 
@@ -799,6 +883,124 @@ export class PapersController {
         nextCursor,
         limit,
       },
+    });
+  };
+
+  public updateComment = async (req: Request, res: Response) => {
+    if(!req.user) return;
+    const { paperId, commentId } = commentIdInPath.parse(req.params);
+    const { body } = updatePaperCommentSchema.parse(req.body);
+
+    req.ctx.set("payload", {
+      paperId,
+      commentId,
+      userId: req.user.id,
+    });
+
+    const paper = await this.papersRepository.findPaperById(paperId);
+
+    if (!paper) {
+      return res.status(404).json({
+        error: "Paper not found",
+      });
+    }
+
+    const existingComment = await this.papersRepository.getPaperCommentById(
+      paperId,
+      commentId,
+    );
+
+    if (!existingComment) {
+      req.ctx.set("error", {
+        message: "Comment not found",
+      });
+      return res.status(404).json({
+        error: "Comment not found",
+      });
+    }
+
+    const isCommentAuthor = existingComment.authorId === req.user.id;
+
+    // Only the comment author (or an admin) can update a comment.
+    if (!req.admin && !isCommentAuthor) {
+      req.log.warn(
+        { paperId, commentId, userId: req.user.id },
+        "Unauthorized attempt to update comment",
+      );
+      return res.status(403).json({
+        error: "Forbidden request",
+      });
+    }
+
+    const { bodyMarkdown, bodyHtml } =
+      this.paperService.renderCommentBody(body);
+
+    const updatedComment = await this.papersRepository.updateComment({
+      paperId,
+      commentId,
+      bodyMarkdown,
+      bodyHtml,
+    });
+
+    return res.status(200).json(updatedComment);
+  };
+
+  public deleteComment = async (req: Request, res: Response) => {
+    if(!req.user) return;
+    const { paperId, commentId } = commentIdInPath.parse(req.params);
+
+    req.ctx.set("payload", {
+      paperId,
+      commentId,
+      userId: req.user.id,
+    });
+
+    const paper = await this.papersRepository.findPaperById(paperId);
+
+    if (!paper) {
+      req.ctx.set("error", {
+        message: "Paper not found",
+      });
+      return res.status(404).json({
+        error: "Paper not found",
+      });
+    }
+
+    const existingComment = await this.papersRepository.getPaperCommentById(
+      paperId,
+      commentId,
+    );
+
+    if (!existingComment) {
+      req.ctx.set("error", {
+        message: "Comment not found",
+      });
+      return res.status(404).json({
+        error: "Comment not found",
+      });
+    }
+
+    const isCommentAuthor = existingComment.authorId === req.user.id;
+    const isPaperAuthor = paper.userId === req.user.id;
+
+    if (!req.admin && !isCommentAuthor && !isPaperAuthor) {
+      req.log.warn(
+        { paperId, commentId, userId: req.user.id },
+        "Unauthorized attempt to delete comment",
+      );
+      return res.status(403).json({
+        error: "Forbidden request",
+      });
+    }
+
+    // @TODO: what if this comment has a lot of replies?
+    await this.papersRepository.deleteCommentWithReplies({
+      paperId,
+      commentId,
+    });
+
+    return res.status(200).json({
+      message: "Comment deleted successfully",
     });
   };
 }

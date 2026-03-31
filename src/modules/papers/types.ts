@@ -64,9 +64,77 @@ export interface PaperComment {
   paperId: number;
   authorId: string;
   parentCommentId: number | null;
-  bodyMarkdown: string;
   bodyHtml: string;
+  bodyMarkdown: string;
   createdAt: Date;
   updatedAt: Date;
   author: PaperCommentAuthor;
+}
+
+export type CommentNotificationEmailTemplateParameters = {
+
+  /**
+   * The notification title
+   */
+  notificationTitle: string;
+
+  /**
+   * The entity that the comment was made on. 
+   * Set to `post` If it's a parent comment, and `comment` if it's a reply to a comment.
+   */
+  entity: 'post' | 'comment'
+
+  /**
+   * Title of the paper
+   */
+  paperTitle: string;
+
+  /**
+   * The name of the paper's author
+   */
+  paperAuthorName: string;
+
+  /**
+   * The name of the commenter
+   */
+  commenterName: string;
+
+  /**
+   * The comment
+   */
+  commentText: string;
+
+  /** Date and Time formatted in human-readable format */
+  commentTimestamp: string;
+
+  /**
+   * The link to the comment on Nubian
+   */
+  commentUrl: string
+
+   /**
+   * The link to see all comments on a paper on Nubian
+   */
+  allCommentsUrl: string
+
+  /**
+   * The URL to the paper on Nubian
+   */
+  paperUrl: string
+
+  /**
+   * The link to reply to the comment on Nubian
+   */
+  replyUrl: string
+
+  /**
+   * If comment is a reply, set inReplyToText to a plain-text preview of the
+   * parent comment. Truncated at 200 chars.
+   */
+  inReplyToText?: string
+}
+
+export type CommentNotificationRecipient = {
+  name: string;
+  email: string
 }

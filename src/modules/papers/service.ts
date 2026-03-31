@@ -1,12 +1,49 @@
+import path from "node:path";
+import * as fs from "fs";
 import MarkdownIt from "markdown-it";
 import sanitizeHtml from "sanitize-html";
+import Handlebars from "handlebars";
 import { MAX_COMMENT_LENGTH } from "./schema";
+import MailService from "../../utils/email/mail-service";
+import {
+  CommentNotificationEmailTemplateParameters,
+  CommentNotificationRecipient,
+} from "./types";
 
-const markdown = new MarkdownIt({
-  html: false,
-  linkify: true,
-  breaks: true,
-});
+const initializeMarkdown = () => {
+  const markdown = new MarkdownIt({
+    html: false,
+    linkify: true,
+    breaks: true,
+  });
+
+  // Force all h1–h3 to render as h4
+  markdown.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
+    const token = tokens[idx];
+    const level = Number(token.tag.slice(1)); // 1–6
+
+    if (level >= 1 && level <= 3) {
+      token.tag = "h4";
+    }
+
+    return self.renderToken(tokens, idx, options);
+  };
+
+  markdown.renderer.rules.heading_close = (tokens, idx, options, env, self) => {
+    const token = tokens[idx];
+    const level = Number(token.tag.slice(1));
+
+    if (level >= 1 && level <= 3) {
+      token.tag = "h4";
+    }
+
+    return self.renderToken(tokens, idx, options);
+  };
+
+  return markdown;
+};
+
+const markdown = initializeMarkdown();
 
 const sanitizeOptions: sanitizeHtml.IOptions = {
   allowedTags: [
@@ -21,6 +58,9 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
     "pre",
     "blockquote",
     "br",
+    "h4",
+    "h5",
+    "h6",
   ],
   allowedAttributes: {
     a: ["href", "title", "class", "target", "rel"],
@@ -29,20 +69,66 @@ const sanitizeOptions: sanitizeHtml.IOptions = {
   allowedSchemes: ["http", "https", "mailto"],
 };
 
-export const renderCommentBody = (rawBody: string) => {
-  const body = rawBody.trim();
+export class PaperService {
+  private mailService: MailService;
 
-  if (body.length > MAX_COMMENT_LENGTH) {
-    throw new Error(
-      `Comment body must be at most ${MAX_COMMENT_LENGTH} characters long`,
-    );
+  constructor(mailService: MailService) {
+    this.mailService = mailService;
   }
 
-  const html = markdown.render(body);
-  const safeHtml = sanitizeHtml(html, sanitizeOptions);
+  private commentNotificationTemplateName = "comment-notification.hbs";
 
-  return {
-    bodyMarkdown: body,
-    bodyHtml: safeHtml,
+  public renderCommentBody = (rawBody: string) => {
+    const body = rawBody.trim();
+
+    if (body.length > MAX_COMMENT_LENGTH) {
+      throw new Error(
+        `Comment body must be at most ${MAX_COMMENT_LENGTH} characters long`,
+      );
+    }
+
+    const html = markdown.render(body);
+    const safeHtml = sanitizeHtml(html, sanitizeOptions);
+
+    return {
+      bodyMarkdown: body,
+      bodyHtml: safeHtml,
+    };
   };
-};
+
+  public sendCommentNotification = async ({
+    subject = "New comment on your post",
+    recipient,
+    parameters,
+  }: {
+    subject: string;
+    recipient: CommentNotificationRecipient;
+    parameters: CommentNotificationEmailTemplateParameters;
+  }) => {
+    const templatePath = path.resolve(
+      __dirname,
+      `../../email-templates/${this.commentNotificationTemplateName}`,
+    );
+    const templateSource = fs.readFileSync(templatePath, "utf8");
+    const template = Handlebars.compile(templateSource);
+
+    const emailHtml = template({ ...parameters });
+
+    return await this.mailService.send({
+      to: [{ name: recipient.name, address: recipient.email }],
+      subject,
+      from: {
+        address: process.env.MAIL_FROM_EMAIL!,
+        name: process.env.MAIL_FROM_NAME || "Nubian Research",
+      },
+      html: emailHtml,
+    });
+  };
+
+  public buildCommentUrl = (paperSlug: string, commentId: number) => {
+    return `${this.buildPaperUrl(paperSlug)}#${commentId}`;
+  };
+  public buildPaperUrl = (paperSlug: string) => {
+    return `https://nubianresearch.com/paper/${paperSlug}`;
+  };
+}
