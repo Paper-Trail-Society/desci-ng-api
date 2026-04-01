@@ -19,20 +19,17 @@ make setup
 
 ## Database
 PostgreSQL with Drizzle ORM:
-- Connection configured via `DATABASE_URL`
+- Connection configured the database credentials (prefixed with **DB_**) in the .env file.
 - Schema defined in `src/db/schema`
 - Migrations in `drizzle/migrations`
 
 Database Commands:
 ```bash
 # Generate migrations
-npm run db:generate
+make db:generate
 
 # Run migrations
-npm run db:migrate
-
-# Check schema against database
-npm run db:check
+make db:migrate
 ```
 
 ## API Endpoints
@@ -46,6 +43,7 @@ npm run db:check
 - Express for API routing
 - PostgreSQL with Drizzle ORM
 - ESLint and Prettier for code quality
+- Vitest for unit and integration tests
 
 ### MIGRATIONS
 When you create schema updates, run the drizzle generate command, which creates the tables to be migrated:
