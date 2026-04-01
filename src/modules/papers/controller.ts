@@ -830,24 +830,34 @@ export class PapersController {
         },
         "Sending comment notification",
       );
-      this.paperService.sendCommentNotification({
-        subject: notificationTitle,
-        recipient: notificationRecipient,
-        parameters: {
-          paperTitle: paper.title,
-          paperAuthorName: paper.author.name,
-          entity: parentCommentId ? "comment" : "post",
-          notificationTitle,
-          commenterName: req.user.name,
-          commentText,
-          commentTimestamp: comment.createdAt.toISOString(),
-          commentUrl: this.paperService.buildCommentUrl(paper.slug, comment.id),
-          replyUrl: this.paperService.buildCommentUrl(paper.slug, comment.id),
-          inReplyToText: inReplyToText ?? undefined,
-          allCommentsUrl: this.paperService.buildPaperUrl(paper.slug),
-          paperUrl: this.paperService.buildPaperUrl(paper.slug),
-        },
-      });
+      try {
+        this.paperService.sendCommentNotification({
+          subject: notificationTitle,
+          recipient: notificationRecipient,
+          parameters: {
+            paperTitle: paper.title,
+            paperAuthorName: paper.author.name,
+            entity: parentCommentId ? "comment" : "post",
+            notificationTitle,
+            commenterName: req.user.name,
+            commentText,
+            commentTimestamp: comment.createdAt.toISOString(),
+            commentUrl: this.paperService.buildCommentUrl(
+              paper.slug,
+              comment.id,
+            ),
+            replyUrl: this.paperService.buildCommentUrl(paper.slug, comment.id),
+            inReplyToText: inReplyToText ?? undefined,
+            allCommentsUrl: this.paperService.buildPaperUrl(paper.slug),
+            paperUrl: this.paperService.buildPaperUrl(paper.slug),
+          },
+        });
+      } catch (error) {
+        req.log.error(
+          { paperId, commentId: comment.id, userId: req.user.id, error: JSON.stringify(error) },
+          "Failed to send comment notification email",
+        );
+      }
     }
 
     return res.status(201).json(comment);
@@ -857,7 +867,6 @@ export class PapersController {
     const { paperId } = paperIdInPath.parse(req.params);
     const { limit, cursor, sortDir, parentCommentId } =
       getPaperCommentsParamsSchema.parse(req.query);
-
 
     const paper = await this.papersRepository.findPaperById(paperId);
 
@@ -887,7 +896,7 @@ export class PapersController {
   };
 
   public updateComment = async (req: Request, res: Response) => {
-    if(!req.user) return;
+    if (!req.user) return;
     const { paperId, commentId } = commentIdInPath.parse(req.params);
     const { body } = updatePaperCommentSchema.parse(req.body);
 
@@ -946,7 +955,7 @@ export class PapersController {
   };
 
   public deleteComment = async (req: Request, res: Response) => {
-    if(!req.user) return;
+    if (!req.user) return;
     const { paperId, commentId } = commentIdInPath.parse(req.params);
 
     req.ctx.set("payload", {
