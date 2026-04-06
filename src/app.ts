@@ -14,6 +14,7 @@ import { logger, httpLogger } from "./config/logger";
 import errorHandler from "./middlewares/error-handler";
 import { requestContext } from "./middlewares/request-context";
 import { donationRouter } from "./modules/donation/route";
+import { profileRouter } from "./modules/profile/route";
 
 const app = express();
 
@@ -26,7 +27,6 @@ const CORS_ORIGINS = (
   .map((s) => s.trim())
   .filter(Boolean);
 
-console.log({CORS_ORIGINS})
 app.use(
   cors({
     origin: CORS_ORIGINS,
@@ -105,6 +105,7 @@ app.use(papersRouter);
 app.use(fieldRouter);
 app.use(keywordRouter);
 app.use(donationRouter);
+app.use(profileRouter);
 
 app.get("/", (_req: Request, res: Response) => {
   res.send("Nubian Research API - Decentralized Science Platform");
