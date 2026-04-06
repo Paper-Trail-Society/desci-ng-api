@@ -25,6 +25,7 @@ export class UserFactory {
         name: overrides.name ?? `Test User ${n}`,
         email: overrides.email ?? `user${n}@example.test`,
         emailVerified: overrides.emailVerified ?? false,
+        areasOfInterest: overrides.areasOfInterest ?? `Area ${n}`,
         ...overrides,
       })
       .returning();
