@@ -22,8 +22,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "dev": "npx tsx --watch src/index.ts",
-    "start": "node dist/index.js",
+    "dev": "npx tsx --watch src/server.ts",
+    "start": "node dist/server.js",
     "prepare:dev": "npm run build && npm run db:generate && npm run db:migrate && npm run db:seed",
     "prepare:prod": "npm run db:migrate && npm run db:seed",
     "db:generate": "drizzle-kit generate",
