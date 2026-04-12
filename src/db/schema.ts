@@ -99,7 +99,7 @@ export const usersTable = desciSchema.table("users", {
   institutionId: integer("institution_id").references(
     () => institutionsTable.id,
   ),
-  areasOfInterest: text("areas_of_interest"),
+  areasOfInterest: jsonb("areas_of_interest"),
   createdAt: timestamp("created_at")
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
