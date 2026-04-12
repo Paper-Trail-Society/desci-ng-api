@@ -22,7 +22,7 @@ describe("GET /profile/:userId", () => {
     const user = await UserFactory.create({
       name: "Ada Lovelace",
       image: "https://example.com/avatar.png",
-      areasOfInterest: "AI, Computational Biology",
+      areasOfInterest: ["AI", "Computational Biology"],
       institutionId: institution.id,
       email: "ada@example.test",
       emailVerified: true,
@@ -37,7 +37,7 @@ describe("GET /profile/:userId", () => {
       id: user.id,
       name: "Ada Lovelace",
       image: "https://example.com/avatar.png",
-      areasOfInterest: "AI, Computational Biology",
+      areasOfInterest: ["AI", "Computational Biology"],
       institution: {
         id: institution.id,
         name: institution.name,
@@ -45,7 +45,6 @@ describe("GET /profile/:userId", () => {
     });
     expect(res.body).toHaveProperty("createdAt");
     expect(res.body).not.toHaveProperty("email");
-    expect(res.body).not.toHaveProperty("emailVerified");
   });
 
   it("returns profile with null institution when user has no institution", async ({

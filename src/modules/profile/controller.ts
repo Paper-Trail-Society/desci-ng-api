@@ -22,8 +22,8 @@ export class ProfileController {
 
       return res.status(200).json(profile);
     } catch (error) {
-      req.ctx.set("error", error);
-      req.log.error({ userId, error }, "Failed to fetch profile");
+      req.ctx.set("error", String(error));
+      req.log.error({ userId, error: String(error), msg:"logger here" }, "Failed to fetch profile");
       return res.status(500).json({
         status: "error",
         message: "Failed to fetch profile",

@@ -32,7 +32,7 @@ export class DatabaseSeeder {
     const user = await UserFactory.create({
       email: `testuser${randomSuffix}@example.com`,
       institutionId: institution.id,
-      areasOfInterest: `Area of Interest ${randomSuffix}, AI, Machine Learning`,
+      areasOfInterest: [`Area of Interest ${randomSuffix}`, "AI", "Machine Learning"],
     });
 
     const admin = await AdminFactory.create({
