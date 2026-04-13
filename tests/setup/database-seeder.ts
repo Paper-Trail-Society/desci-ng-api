@@ -24,24 +24,28 @@ export class DatabaseSeeder {
   }
 
   static async seedCore() {
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
     const institution = await InstitutionFactory.create({
-      name: "Test Institution",
+      name: `Test Institution ${randomSuffix}`,
     });
 
     const user = await UserFactory.create({
+      email: `testuser${randomSuffix}@example.com`,
       institutionId: institution.id,
+      areasOfInterest: [`Area of Interest ${randomSuffix}`, "AI", "Machine Learning"],
     });
 
     const admin = await AdminFactory.create({
-      name: "Core Admin",
+      email: `testadmin${randomSuffix}@example.com`,
+      name: `Core Admin ${randomSuffix}`,
     });
 
     const field = await FieldFactory.create({
-      name: "Core Field",
+      name: `Core Field ${randomSuffix}`,
     });
 
     const category = await CategoryFactory.create({
-      name: "Core Category",
+      name: `Core Category ${randomSuffix}`,
       fieldId: field.id,
     });
 
@@ -57,7 +61,7 @@ export class DatabaseSeeder {
       const paper = await PaperFactory.create({
         userId: user.id,
         categoryId: category.id,
-        status: i === 0 ? "published" : "pending",
+        status: "published",
       });
       papers.push(paper);
     }
@@ -65,3 +69,11 @@ export class DatabaseSeeder {
     return papers;
   }
 }
+
+// DatabaseSeeder.seedSamplePapers(20).then(() => {
+//   console.log("Database seeding completed.");
+//   process.exit(0);
+// }).catch((error) => {
+//   console.error("Error during database seeding:", error);
+//   process.exit(1);
+// });

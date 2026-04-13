@@ -2,4 +2,4 @@
 - Favor dependency injection when creating class-based controllers and services.
 - Write tests for every new implementation.
 - Add contextual logs with `req.ctx` and `req.log` where necessary in the request-response cycle.
-- 
+- All domain concerns are seperated by modules. (see `src/modules`)
