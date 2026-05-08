@@ -7,7 +7,6 @@ const baseLogger = pino({
   base: {
     service: "nubianresearch-api",
     env: process.env.NODE_ENV || "development",
-    timestamp: new Date().toISOString(),
   },
   redact: {
     paths: [

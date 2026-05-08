@@ -144,45 +144,71 @@ export class PapersController {
         .json({ error: "An error occurred while uploading paper" });
     }
 
-    const createdPaper = await db.transaction(async (tx) => {
-      const paperSlug = slug(`${body.title.substring(0, 75)} ${Date.now()}`);
-      const [newPaper] = await tx
-        .insert(papersTable)
-        .values({
-          title: body.title,
-          slug: paperSlug,
-          abstract: body.abstract,
-          categoryId: body.categoryId,
-          notes: body.notes,
-          ipfsCid: paperCid,
-          ipfsUrl: `https://${process.env.PINATA_GATEWAY}/ipfs/${paperCid}`,
-          userId,
-          status: "pending",
-        })
-        .returning();
+    let createdPaper;
+    try {
+      createdPaper = await db.transaction(async (tx) => {
+        const paperSlug = slug(`${body.title.substring(0, 75)} ${Date.now()}`);
+        const [newPaper] = await tx
+          .insert(papersTable)
+          .values({
+            title: body.title,
+            slug: paperSlug,
+            abstract: body.abstract,
+            categoryId: body.categoryId,
+            notes: body.notes,
+            ipfsCid: paperCid,
+            ipfsUrl: `https://${process.env.PINATA_GATEWAY}/ipfs/${paperCid}`,
+            userId,
+            status: "pending",
+          })
+          .returning();
 
-      for (const keywordId of keywordIdsToMapToPaper) {
-        try {
-          await tx
-            .insert(paperKeywordsTable)
-            .values({
-              paperId: newPaper.id,
-              keywordId,
-            })
-            .returning();
-        } catch (error: any) {
-          // check if the error is a unique constraint exception. See 23505 https://www.postgresql.org/docs/current/errcodes-appendix.html
-          if (error.code === "23505") {
-            req.log.warn(
-              { paperId: newPaper.id, keywordId },
-              "Unique constraint violation: This is a duplicate keyword attachment",
+        for (const keywordId of keywordIdsToMapToPaper) {
+          try {
+            await tx
+              .insert(paperKeywordsTable)
+              .values({
+                paperId: newPaper.id,
+                keywordId,
+              })
+              .returning();
+          } catch (error: any) {
+            const constraint = error.constraint_name;
+
+            if (
+              String(error.code) === "23505" &&
+              constraint === "paper_keywords_unique_idx"
+            ) {
+              req.log.warn(
+                { paperId: newPaper.id, keywordId, constraint },
+                "Duplicate keyword attachment skipped",
+              );
+              continue;
+            }
+
+            req.log.error(
+              { err: error, paperId: newPaper.id, keywordId, constraint },
+              "Failed to attach keyword to paper",
             );
+            throw error;
           }
         }
-      }
 
-      return newPaper;
-    });
+        return newPaper;
+      });
+    } catch (error) {
+      req.ctx.set("error", error);
+      req.log.error(
+        {
+          err: error,
+          userId,
+          categoryId: body.categoryId,
+          keywordIds: Array.from(keywordIdsToMapToPaper),
+        },
+        "Paper creation transaction failed",
+      );
+      throw error;
+    }
     return res.status(201).json(createdPaper);
   };
 
@@ -524,7 +550,7 @@ export class PapersController {
               .returning();
           } catch (error: any) {
             // check if the error is a unique constraint exception. See 23505 https://www.postgresql.org/docs/current/errcodes-appendix.html
-            if (error.code === "23505") {
+            if (error.code === "23505" && error.constraint_name === "paper_keywords_unique_idx") {
               req.log.error(
                 error,
                 "Unique constraint violation: This keyword attachment already exists.",
@@ -566,7 +592,7 @@ export class PapersController {
               .returning();
           } catch (error: any) {
             // check if the error is a unique constraint exception. See 23505 https://www.postgresql.org/docs/current/errcodes-appendix.html
-            if (error.code === "23505") {
+            if (error.code === "23505" && error.constraint_name === "paper_keywords_unique_idx") {
               req.log.error(
                 error,
                 "Unique constraint violation: This keyword attachment already exists.",

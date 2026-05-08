@@ -5,7 +5,7 @@ const ERROR_HANDLER_LOG_ORIGIN = "error-handler-middleware";
 const errorHandler = (
   err: Error,
   req: Request,
-res: Response,
+  res: Response,
   next: NextFunction,
 ) => {
   req.log
