@@ -12,6 +12,8 @@ export const {
   papersTable,
   paperKeywordsTable,
   institutionsTable,
+  projectShowcaseSubmissionsTable,
+  projectShowcaseWaitlistTable,
 } = schema;
 
 export type UserInsert = typeof schema.usersTable.$inferInsert;
@@ -35,3 +37,12 @@ export type Paper = typeof schema.papersTable.$inferSelect;
 export type InstitutionInsert = typeof schema.institutionsTable.$inferInsert;
 export type Institution = typeof schema.institutionsTable.$inferSelect;
 
+export type ProjectShowcaseSubmissionInsert =
+  typeof schema.projectShowcaseSubmissionsTable.$inferInsert;
+export type ProjectShowcaseSubmission =
+  typeof schema.projectShowcaseSubmissionsTable.$inferSelect;
+
+export type ProjectShowcaseWaitlistInsert =
+  typeof schema.projectShowcaseWaitlistTable.$inferInsert;
+export type ProjectShowcaseWaitlist =
+  typeof schema.projectShowcaseWaitlistTable.$inferSelect;

@@ -13,12 +13,12 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "noEmit": false,
-    "typeRoots": ["src/types", "node_modules/@types"],
+    "typeRoots": ["./src/types", "./node_modules/@types"],
     "verbatimModuleSyntax": false,
     "allowSyntheticDefaultImports": true,
     "declaration": false,
     "sourceMap": true
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts"],
   "exclude": ["node_modules", "dist", "drizzle"]
 }

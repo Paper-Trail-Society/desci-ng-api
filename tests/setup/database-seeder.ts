@@ -13,6 +13,8 @@ export class DatabaseSeeder {
         desci.paper_comments,
         desci.paper_keywords,
         desci.papers,
+        desci.project_showcase_submissions,
+        desci.project_showcase_waitlist,
         desci.keywords,
         desci.categories,
         desci.fields,
