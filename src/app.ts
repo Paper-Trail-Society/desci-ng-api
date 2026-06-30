@@ -15,6 +15,7 @@ import errorHandler from "./middlewares/error-handler";
 import { requestContext } from "./middlewares/request-context";
 import { donationRouter } from "./modules/donation/route";
 import { profileRouter } from "./modules/profile/route";
+import { projectShowcaseSubmissionRouter } from "./modules/project-showcase-submissions/route";
 import { eq } from "drizzle-orm";
 
 const app = express();
@@ -136,6 +137,7 @@ app.use(fieldRouter);
 app.use(keywordRouter);
 app.use(donationRouter);
 app.use(profileRouter);
+app.use(projectShowcaseSubmissionRouter);
 
 app.get("/", (_req: Request, res: Response) => {
   res.send("Nubian Research API - Decentralized Science Platform");

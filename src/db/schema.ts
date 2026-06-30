@@ -282,6 +282,64 @@ export const institutionsTable = desciSchema.table("institutions", {
     .notNull(),
 });
 
+export const projectShowcaseSubmissionsTable = desciSchema.table(
+  "project_showcase_submissions",
+  {
+    id: serial("id").primaryKey(),
+    fullName: varchar("full_name", { length: 255 }).notNull(),
+    email: varchar("email", { length: 255 }).notNull(),
+    phoneNumber: varchar("phone_number", { length: 50 }).notNull(),
+    institutionId: integer("institution_id")
+      .notNull()
+      .references(() => institutionsTable.id),
+    department: varchar("department", { length: 255 }).notNull(),
+    degreeProgram: varchar("degree_program", { length: 120 }).notNull(),
+    projectTitle: varchar("project_title", { length: 255 }).notNull(),
+    projectSummary: text("project_summary").notNull(),
+    inspiration: text("inspiration"),
+    problemStatement: text("problem_statement").notNull(),
+    supportUse: text("support_use"),
+    beneficiaries: text("beneficiaries"),
+    currentProgress: text("current_progress").notNull(),
+    expectedImpact: text("expected_impact").notNull(),
+    expectedStartDate: timestamp("expected_start_date").notNull(),
+    expectedEndDate: timestamp("expected_end_date").notNull(),
+    projectUrl: varchar("project_url", { length: 2048 }),
+    repositoryUrl: varchar("repository_url", { length: 2048 }),
+    demoUrl: varchar("demo_url", { length: 2048 }),
+    willProvideUpdates: boolean("will_provide_updates").notNull(),
+    consentToFeature: boolean("consent_to_feature").notNull(),
+    status: varchar("status", { length: 50 }).notNull().default("pending"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$defaultFn(() => /* @__PURE__ */ new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("project_showcase_submissions_status_idx").on(table.status),
+    index("project_showcase_submissions_institution_idx").on(table.institutionId),
+    index("project_showcase_submissions_created_at_idx").on(table.createdAt),
+  ],
+);
+
+export const projectShowcaseWaitlistTable = desciSchema.table(
+  "project_showcase_waitlist",
+  {
+    id: serial("id").primaryKey(),
+    email: varchar("email", { length: 255 }).notNull().unique(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .notNull()
+      .$defaultFn(() => /* @__PURE__ */ new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("project_showcase_waitlist_email_idx").on(table.email),
+    index("project_showcase_waitlist_created_at_idx").on(table.createdAt),
+  ],
+);
+
 export const jwksTable = desciSchema.table("jwks", {
   id: text("id").primaryKey(),
   publicKey: text("public_key").notNull(),
@@ -328,3 +386,13 @@ export type SelectPaperComment = typeof paperCommentsTable.$inferSelect;
 
 export type InsertInstitution = typeof institutionsTable.$inferInsert;
 export type SelectInstitution = typeof institutionsTable.$inferSelect;
+
+export type InsertProjectShowcaseSubmission =
+  typeof projectShowcaseSubmissionsTable.$inferInsert;
+export type SelectProjectShowcaseSubmission =
+  typeof projectShowcaseSubmissionsTable.$inferSelect;
+
+export type InsertProjectShowcaseWaitlist =
+  typeof projectShowcaseWaitlistTable.$inferInsert;
+export type SelectProjectShowcaseWaitlist =
+  typeof projectShowcaseWaitlistTable.$inferSelect;

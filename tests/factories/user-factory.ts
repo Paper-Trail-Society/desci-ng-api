@@ -9,6 +9,7 @@ import {
   Admin,
 } from "./db";
 import { auth } from "../../src/utils/auth";
+import { adminAuth } from "../../src/utils/admin-auth";
 
 export class UserFactory {
   private static userCounter = 1;
@@ -40,7 +41,9 @@ export class UserFactory {
 export class AdminFactory {
   private static adminCounter = 1;
 
-  static async create(overrides: Partial<AdminInsert> = {}): Promise<Admin> {
+  static async create(
+    overrides: Partial<AdminInsert> = {},
+  ): Promise<Admin & { authToken: string }> {
     const n = this.adminCounter++;
 
     const [admin] = await db
@@ -54,6 +57,9 @@ export class AdminFactory {
       })
       .returning();
 
-    return admin;
+    const ctx = await adminAuth.$context;
+    const session = await ctx.internalAdapter.createSession(admin.id, false);
+
+    return { ...admin, authToken: session.token };
   }
 }
