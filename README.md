@@ -4,6 +4,7 @@ Decentralized Science Platform API built with TypeScript, Express and PostgreSQL
 
 ## Requirements
 - Docker (https://www.docker.com)
+- Make 
 
 ## Quick Start
 
