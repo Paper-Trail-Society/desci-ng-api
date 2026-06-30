@@ -99,7 +99,7 @@ describe("POST /project-showcase-submissions", () => {
     expect(res.body).toMatchObject({
       status: "success",
       message: "Project showcase submission received",
-      submission: {
+      data: {
         fullName: payload.fullName,
         email: payload.email,
         phoneNumber: payload.phoneNumber,
@@ -239,12 +239,12 @@ describe("GET /project-showcase-submissions", () => {
       .expect("Content-Type", /json/)
       .expect(200);
 
-    expect(res.body.total).toBe(2);
-    expect(res.body.size).toBe(20);
-    expect(res.body.prev_page).toBeNull();
-    expect(res.body.data).toHaveLength(2);
-    expect(res.body.data[0].projectTitle).toBe("Project Two");
-    expect(res.body.data[1].projectTitle).toBe("Project One");
+    expect(res.body.data.total).toBe(2);
+    expect(res.body.data.size).toBe(20);
+    expect(res.body.data.prev_page).toBeNull();
+    expect(res.body.data.data).toHaveLength(2);
+    expect(res.body.data.data[0].projectTitle).toBe("Project Two");
+    expect(res.body.data.data[1].projectTitle).toBe("Project One");
   });
 });
 
@@ -259,7 +259,7 @@ describe("POST /project-showcase-waitlist", () => {
     expect(res.body).toMatchObject({
       status: "success",
       message: "You will be notified when submissions reopen",
-      entry: {
+      data: {
         email: "notify@example.test",
       },
     });
@@ -283,7 +283,7 @@ describe("POST /project-showcase-waitlist", () => {
     expect(res.body).toMatchObject({
       status: "success",
       message: "You are already on the notify list",
-      entry: {
+      data: {
         email: "notify@example.test",
       },
     });
