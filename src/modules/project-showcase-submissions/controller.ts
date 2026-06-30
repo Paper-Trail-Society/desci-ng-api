@@ -43,7 +43,7 @@ export class ProjectShowcaseSubmissionController {
     return res.status(201).json({
       status: "success",
       message: "Project showcase submission received",
-      submission,
+      data: submission,
     });
   };
 
@@ -68,7 +68,7 @@ export class ProjectShowcaseSubmissionController {
       return res.status(200).json({
         status: "success",
         message: "You are already on the notify list",
-        entry: existingEntry,
+        data: existingEntry,
       });
     }
 
@@ -80,7 +80,7 @@ export class ProjectShowcaseSubmissionController {
     return res.status(201).json({
       status: "success",
       message: "You will be notified when submissions reopen",
-      entry,
+      data: entry,
     });
   };
 
@@ -96,6 +96,6 @@ export class ProjectShowcaseSubmissionController {
     const submissions =
       await this.projectShowcaseSubmissionRepository.list(query);
 
-    return res.status(200).json(submissions);
+    return res.status(200).json({ data: submissions });
   };
 }
