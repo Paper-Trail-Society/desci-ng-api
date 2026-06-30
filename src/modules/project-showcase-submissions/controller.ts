@@ -6,6 +6,7 @@ import {
   listProjectShowcaseSubmissionsQuerySchema,
 } from "./schema";
 import { ProjectShowcaseSubmissionRepository } from "./repository";
+import { findOrCreateInstitutionByName } from "../../utils/institutions";
 
 export class ProjectShowcaseSubmissionController {
   public constructor(
@@ -20,9 +21,18 @@ export class ProjectShowcaseSubmissionController {
       throw new ApiError("Expected finish date must be on or after the start date", 400);
     }
 
-    const institution = await this.projectShowcaseSubmissionRepository.findInstitution(
-      payload.institutionId,
-    );
+    let institution =
+      typeof payload.institutionId === "number"
+        ? await this.projectShowcaseSubmissionRepository.findInstitution(
+            payload.institutionId,
+          )
+        : null;
+
+    if (!institution && payload.institutionInput) {
+      institution = await findOrCreateInstitutionByName(
+        payload.institutionInput,
+      );
+    }
 
     if (!institution) {
       throw new ApiError("Institution does not exist", 400);
@@ -32,13 +42,20 @@ export class ProjectShowcaseSubmissionController {
       {
         origin: "project-showcase-submissions.create",
         email: payload.email,
-        institutionId: payload.institutionId,
+        institutionId: institution.id,
       },
       "Creating project showcase submission",
     );
 
+    const submissionPayload = {
+      ...payload,
+      institutionId: institution.id,
+    };
+
+    delete submissionPayload.institutionInput;
+
     const submission =
-      await this.projectShowcaseSubmissionRepository.create(payload);
+      await this.projectShowcaseSubmissionRepository.create(submissionPayload);
 
     return res.status(201).json({
       status: "success",

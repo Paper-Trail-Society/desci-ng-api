@@ -12,6 +12,13 @@ import {
   ListProjectShowcaseSubmissionsQuery,
 } from "./schema";
 
+type CreateProjectShowcaseSubmissionPersistenceInput = Omit<
+  CreateProjectShowcaseSubmissionInput,
+  "institutionInput"
+> & {
+  institutionId: number;
+};
+
 const submissionSelection = {
   id: projectShowcaseSubmissionsTable.id,
   fullName: projectShowcaseSubmissionsTable.fullName,
@@ -67,7 +74,9 @@ export class ProjectShowcaseSubmissionRepository {
       .then((rows) => rows[0] ?? null);
   };
 
-  public create = async (payload: CreateProjectShowcaseSubmissionInput) => {
+  public create = async (
+    payload: CreateProjectShowcaseSubmissionPersistenceInput,
+  ) => {
     const [createdSubmission] = await db
       .insert(projectShowcaseSubmissionsTable)
       .values(payload)
