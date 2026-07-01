@@ -27,6 +27,7 @@ describe("POST /project-showcase-submissions", () => {
         email: "ada@example.test",
         phoneNumber: "+2348012345678",
         institutionId: institution.id,
+        institutionInput: institution.name,
         department: "Computer Science",
         degreeProgram: "BSc",
         projectTitle: "Distributed Knowledge Graph for Campus Research",
@@ -63,6 +64,7 @@ describe("POST /project-showcase-submissions", () => {
       email: "ada@example.test",
       phoneNumber: "+2348012345678",
       institutionId: institution.id,
+      institutionInput: institution.name,
       department: "Computer Science",
       degreeProgram: "BSc",
       projectTitle: "Distributed Knowledge Graph for Campus Research",
@@ -126,6 +128,57 @@ describe("POST /project-showcase-submissions", () => {
     expect(submissions[0].projectTitle).toBe(payload.projectTitle);
   });
 
+  it("creates and links a typed institution for a submission", async ({
+    expect,
+  }) => {
+    const user = await UserFactory.create({
+      email: "typed-institution@example.test",
+    });
+
+    const payload = {
+      fullName: "Grace Hopper",
+      email: "grace@example.test",
+      phoneNumber: "+2348099999999",
+      institutionInput: "Towson University",
+      department: "Computer Science",
+      degreeProgram: "MSc",
+      projectTitle: "Open Research Registry for Student Work",
+      projectSummary:
+        "This project explores how open metadata, searchable archives, and lightweight identity can improve the continuity and discoverability of student research across institutions.",
+      problemStatement:
+        "Student research often ends as isolated departmental archives, which makes it difficult for peers, supervisors, and future researchers to discover, verify, or extend prior work.",
+      currentProgress:
+        "The discovery workflow has been mapped, the initial interface has been designed, and a working prototype is already being validated with early test users.",
+      expectedImpact:
+        "If successful, the project could help universities treat student work as part of a broader research commons rather than as one-off academic exercises.",
+      expectedStartDate: "2026-01-15",
+      expectedEndDate: "2026-09-30",
+      willProvideUpdates: true,
+      consentToFeature: true,
+    };
+
+    const res = await api
+      .post("/project-showcase-submissions")
+      .set("Authorization", `Bearer ${user.authToken}`)
+      .send(payload)
+      .expect("Content-Type", /json/)
+      .expect(201);
+
+    expect(res.body).toMatchObject({
+      status: "success",
+      message: "Project showcase submission received",
+      data: {
+        institution: {
+          name: payload.institutionInput,
+        },
+      },
+    });
+
+    const submissions = await db.select().from(projectShowcaseSubmissionsTable);
+    expect(submissions).toHaveLength(1);
+    expect(submissions[0].institutionId).toBeTruthy();
+  });
+
   it("returns 400 when institution does not exist", async ({ expect }) => {
     const user = await UserFactory.create({
       email: "invalid-institution@example.test",
@@ -139,6 +192,7 @@ describe("POST /project-showcase-submissions", () => {
         email: "ada@example.test",
         phoneNumber: "+2348012345678",
         institutionId: 999999,
+        institutionInput: "",
         department: "Computer Science",
         degreeProgram: "BSc",
         projectTitle: "Distributed Knowledge Graph for Campus Research",
@@ -191,6 +245,7 @@ describe("GET /project-showcase-submissions", () => {
         email: "first@example.test",
         phoneNumber: "+2348011111111",
         institutionId: institution.id,
+        institutionInput: institution.name,
         department: "Computer Science",
         degreeProgram: "BSc",
         projectTitle: "Project One",
@@ -216,6 +271,7 @@ describe("GET /project-showcase-submissions", () => {
         email: "second@example.test",
         phoneNumber: "+2348022222222",
         institutionId: institution.id,
+        institutionInput: institution.name,
         department: "Computer Science",
         degreeProgram: "BSc",
         projectTitle: "Project Two",

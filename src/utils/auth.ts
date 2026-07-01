@@ -2,14 +2,48 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import Handlebars from "handlebars";
 import { betterAuth } from "better-auth";
+import { createAuthMiddleware } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { bearer, jwt, openAPI } from "better-auth/plugins";
 import * as schema from "../db/schema";
 import { db } from "../config/db";
 import { logger } from "../config/logger";
 import { mailService } from "./email/mail-service";
+import { findOrCreateInstitutionByName } from "./institutions";
 
 const authLogger = logger.child({ origin: "auth" });
+
+const institutionSignupPlugin = {
+  id: "institution-signup",
+  hooks: {
+    before: [
+      {
+        matcher(context: { path?: string }) {
+          return context.path === "/sign-up/email";
+        },
+        handler: createAuthMiddleware(async (ctx) => {
+          if (typeof ctx.body.institutionId === "number") {
+            return;
+          }
+
+          if (typeof ctx.body.institutionInput !== "string") {
+            return;
+          }
+
+          const institution = await findOrCreateInstitutionByName(
+            ctx.body.institutionInput,
+          );
+
+          if (!institution) {
+            return;
+          }
+
+          ctx.body.institutionId = institution.id;
+        }),
+      },
+    ],
+  },
+};
 
 export const auth = betterAuth({
   appName: "Nubian",
@@ -78,7 +112,7 @@ export const auth = betterAuth({
       void sendVerificationEmail({ user, verificationUrl: url });
     },
   },
-  plugins: [openAPI(), jwt(), bearer()],
+  plugins: [institutionSignupPlugin, openAPI(), jwt(), bearer()],
   logger: {
     level: "info",
     log: (level, message, ...args) => {
