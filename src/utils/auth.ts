@@ -69,6 +69,7 @@ export const auth = betterAuth({
         domain: "nubianresearch.com",
       },
     }),
+    disableOriginCheck: process.env.NODE_ENV !== "production",
   },
   rateLimit: {
     enabled: false,

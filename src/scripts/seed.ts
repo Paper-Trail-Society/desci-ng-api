@@ -58,7 +58,7 @@ const seedFieldsAndCategoriesTable = async () => {
       "Astronomy",
     ],
     "Physical Sciences": ["Industrial Chemistry", "Chemistry"],
-    "Computing, Communication & Information": [
+    "Computing, Communication & Information Technology": [
       "Computer Science",
       "Mass Communication",
       "Library & Information Science",
